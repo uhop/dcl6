@@ -1,7 +1,7 @@
 'use strict';
 
-// import dcl from './dcl';
-const dcl = require('./dcl');
+// import dcl from '../../dcl';
+const dcl = require('../../dcl');
 
 const SuperArray = dcl(Array, Base => class extends Base {
 	static get [dcl.declaredClass]() { return 'SuperArray'; }

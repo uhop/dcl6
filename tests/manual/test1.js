@@ -1,7 +1,7 @@
 'use strict';
 
-// import dcl from './dcl';
-const dcl = require('./dcl');
+// import dcl from '../../dcl';
+const dcl = require('../../dcl');
 
 
 const PostConstructed = Base => class extends Base {
