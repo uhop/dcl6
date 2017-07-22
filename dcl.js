@@ -260,12 +260,17 @@
 
 	const makeValueStub = (fn, advice) => {
 		const stub = (advice['get.before'] || advice['get.after'] ? makeValueStubWithGetters : makeValueStubDefault)(fn, advice);
-		stub.advice = advice; // TODO: replace stub.advice with a Symbol
+		stub[dcl.advice] = advice;
 		return stub;
 	};
 
+	const haveAdvices = (advice, prefix, suffix) => advice[prefix + suffix] && advice[prefix + suffix].length;
+	const haveAnyAdvices = (advice, prefix) => haveAdvices(advice, prefix, 'before') ||
+		haveAdvices(advice, prefix, 'after') || haveAdvices(advice, prefix, 'around');
+
 	const makeGetStub = (fn, advice) => {
 		if (!fn) {
+			if (!haveAnyAdvices(advice, 'get.')) { return fn; }
 			fn = function () {};
 		}
 		const stub = function () {
@@ -293,12 +298,13 @@
 			}
 			return result;
 		};
-		stub.advice = advice;
+		stub[dcl.advice] = advice;
 		return stub;
-	}
+	};
 
 	const makeSetStub = (fn, advice) => {
 		if (!fn) {
+			if (!haveAnyAdvices(advice, 'get.')) { return fn; }
 			fn = function () {};
 		}
 		const stub = function (value) {
@@ -325,38 +331,36 @@
 				throw result;
 			}
 		};
-		stub.advice = advice;
+		stub[dcl.advice] = advice;
 		return stub;
 	};
 
 	const makeCtrStub = (fn, advice) => {
-		const stub = new Proxy(fn, {construct: function (target, args) {
-				let i, fns = advice.before, result, thrown = false;
-				// run main advices
-				if (fns) {
-					for (i = 0; i < fns.length; ++i) {
-						fns[i].apply(null, args);
-					}
+		return new Proxy(fn, {construct: function (target, args) {
+			let i, fns = advice.before, result, thrown = false;
+			// run main advices
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].apply(null, args);
 				}
-				try {
-					result = new fn(...args);
-				} catch (e) {
-					result = e;
-					thrown = true;
+			}
+			try {
+				result = new fn(...args);
+			} catch (e) {
+				result = e;
+				thrown = true;
+			}
+			fns = advice.after;
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].call(result, args, result);
 				}
-				fns = advice.after;
-				if (fns) {
-					for (i = 0; i < fns.length; ++i) {
-						fns[i].call(result, args, result);
-					}
-				}
-				if (thrown) {
-					throw result;
-				}
-				return result;
-			}});
-		stub.advice = advice;
-		return stub;
+			}
+			if (thrown) {
+				throw result;
+			}
+			return result;
+		}});
 	};
 
 	const updateValue = (o, name, value) => {
@@ -434,7 +438,7 @@
 				advices[name] = {};
 			}
 			const target = advices[name];
-			['get.before', 'get.after', 'set.before', 'set.after', 'before', 'after'].
+			['get.before', 'get.after', 'get.around', 'set.before', 'set.after', 'set.around', 'before', 'after', 'around'].
 				forEach(name => collectAdvice(target, advice, name));
 		};
 
@@ -545,6 +549,7 @@
 	dcl.declaredClass = Symbol('name');
 	dcl.directives = Symbol('directives');
 	dcl.meta = Symbol('meta');
+	dcl.advice = Symbol('advice');
 
 	// weavers
 	dcl.weavers = {
