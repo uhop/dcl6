@@ -186,6 +186,58 @@
 		};
 	};
 
+	const makeValueStubFromGetter = (getter, advice) => {
+		const stub = function () {
+			let i, fns = advice['get.before'], result, thrown = false;
+			// run getter advices
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].apply(this, arguments);
+				}
+			}
+			try {
+				result = getter.call(this);
+			} catch (e) {
+				result = e;
+				thrown = true;
+			}
+			fns = advice['get.after'];
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].call(this, arguments, result);
+				}
+			}
+			if (thrown) {
+				throw result;
+			}
+			// run main advices
+			fns = advice.before;
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].apply(this, arguments);
+				}
+			}
+			try {
+				result = result.apply(this, arguments);
+			} catch (e) {
+				result = e;
+				thrown = true;
+			}
+			fns = advice.after;
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].call(this, arguments, result);
+				}
+			}
+			if (thrown) {
+				throw result;
+			}
+			return result;
+		};
+		stub[dcl.advice] = advice;
+		return stub;
+	};
+
 	const makeValueStubWithGetters = (fn, advice) => {
 		return function () {
 			let i, fns = advice['get.before'], result = fn, thrown = false;
@@ -475,12 +527,21 @@
 					if (directives.hasOwnProperty(name)) {
 						throw new Error('chaining cannot be applied to accessors');
 					}
-					newProp = {
-						get: makeGetStub(prop.get, advice),
-						set: makeSetStub(prop.set, advice),
-						configurable: true,
-						enumerable:   prop.enumerable
-					};
+					if (haveAnyAdvices(advice, '')) {
+						newProp = {
+							value: makeValueStubFromGetter(prop.get, advice),
+							configurable: true,
+							enumerable:   prop.enumerable,
+							writable:     true
+						};
+					} else {
+						newProp = {
+							get: makeGetStub(prop.get, advice),
+							set: makeSetStub(prop.set, advice),
+							configurable: true,
+							enumerable:   prop.enumerable
+						};
+					}
 				} else {
 					// data descriptor
 					let value = prop.value;
