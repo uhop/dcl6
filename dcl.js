@@ -12,10 +12,11 @@
 		let commonBase = bases[0];
 		for (let i = 1; i < bases.length; ++i) {
 			const base = bases[i];
-			if (commonBase[pname].isPrototypeOf(base[pname])) {
+			if (commonBase === base || base[pname].isPrototypeOf(commonBase[pname])) {
+				// do nothing
+			} else if (commonBase[pname].isPrototypeOf(base[pname])) {
 				commonBase = base;
-			} else if (!base[pname].isPrototypeOf(commonBase[pname])) {
-				// incompatible bases
+			} else {
 				throw new Error('incompatible bases');
 				// dcl._error('incompatible bases');
 			}
@@ -29,7 +30,7 @@
 		mixins.forEach(mixins => {
 			mixins.forEach(function (mixin, index) {
 				if (connectivity.has(mixin)) {
-					const value = connectivity.get(base);
+					const value = connectivity.get(mixin);
 					++value.counter;
 					if (index) {
 						value.links.push(mixins[index - 1]);
