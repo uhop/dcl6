@@ -130,7 +130,7 @@
 			Object[pname].hasOwnProperty.call(ctr[pname], dcl.directives) && ctr[pname][dcl.directives];
 		ownDirectives && Object.keys(ownDirectives).forEach(name => {
 			const advice = ownDirectives[name];
-			if (advice.around || advice.get && advice.get.around || advise.set && advice.set.around) {
+			if (advice.around || advice.get && advice.get.around || advice.set && advice.set.around) {
 				let replace, prop = getPropertyDescriptor(ctr[pname], name);
 				if (prop) { // guided by existing descriptor
 					if (prop.get || prop.set) { // accessor descriptor
@@ -521,7 +521,7 @@
 					configurable: true,
 					writable:     true
 				};
-				if (newProp.value === prop.value) { newProp = null; }
+				if (newProp.value === nop) { newProp = null; }
 			}
 			if (newProp) {
 				if (prop && Object[pname].hasOwnProperty.call(ctr[pname], name)) {
