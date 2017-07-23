@@ -184,73 +184,87 @@
 
 			const n = new (dcl(C, A, B));
 			eval(t.TEST('n.a === "CABP"'));
+		},
+		function test_advise (t) {
+			const A = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							after: function () {
+								this.a = this.a || '';
+								this.a += 'Aa';
+							}
+						}
+					};
+				}
+			});
+			const B = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							before: function () {
+								this.a = this.a || '';
+								this.a += 'Bb';
+							}
+						}
+					};
+				}
+			});
+			const C = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							around: function (sup) {
+								return function () {
+									this.a = this.a || '';
+									this.a += 'Cfb';
+									sup && sup.apply(this, arguments);
+									this.a += 'Cfa';
+								};
+							}
+						}
+					};
+				}
+			});
+			const D = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							before: function () {
+								this.a = this.a || '';
+								this.a += 'Db';
+							},
+							around: function (sup) {
+								return function () {
+									this.a = this.a || '';
+									this.a += 'Dfb';
+									sup && sup.apply(this, arguments);
+									this.a += 'Dfa';
+								};
+							},
+							after: function () {
+								this.a = this.a || '';
+								this.a += 'Da';
+							}
+						}
+					};
+				}
+			});
+			const E = dcl(null, Base => class extends Base {
+				m1 () {
+					this.a = this.a || '';
+					this.a += 'E';
+				}
+			});
+
+			const x = new (dcl(E, A, B, C, D));
+			x.m1();
+			eval(t.TEST('x.a === "DbBbDfbCfbECfaDfaAaDa"'));
+
+			const y = new (dcl(A, B, C, D, E));
+			y.m1();
+			eval(t.TEST('y.a === "DbBbEAaDa"'));
 		}
-		// function test_advise (t) {
-		// 	var A = dcl(null, {
-		// 		m1: dcl.advise({
-		// 			after: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Aa';
-		// 			}
-		// 		})
-		// 	});
-		// 	var B = dcl(null, {
-		// 		m1: dcl.advise({
-		// 			before: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Bb';
-		// 			}
-		// 		})
-		// 	});
-		// 	var C = dcl(null, {
-		// 		m1: dcl.superCall(function (sup) {
-		// 			return function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Cfb';
-		// 				if (sup) {
-		// 					sup.apply(this, arguments);
-		// 				}
-		// 				this.a += 'Cfa';
-		// 			};
-		// 		})
-		// 	});
-		// 	var D = dcl(null, {
-		// 		m1: dcl.advise({
-		// 			before: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Db';
-		// 			},
-		// 			around: function (sup) {
-		// 				return function () {
-		// 					if (!this.a) { this.a = ''; }
-		// 					this.a += 'Dfb';
-		// 					if (sup) {
-		// 						sup.apply(this, arguments);
-		// 					}
-		// 					this.a += 'Dfa';
-		// 				};
-		// 			},
-		// 			after: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Da';
-		// 			}
-		// 		})
-		// 	});
-		// 	var E = dcl(null, {
-		// 		m1: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'E';
-		// 		}
-		// 	});
-		//
-		// 	var x = new (dcl([E, A, B, C, D], {}));
-		// 	x.m1();
-		// 	eval(t.TEST('x.a === "DbBbDfbCfbECfaDfaAaDa"'));
-		//
-		// 	var y = new (dcl([A, B, C, D, E], {}));
-		// 	y.m1();
-		// 	eval(t.TEST('y.a === "DbBbEAaDa"'));
-		// },
 		// function test_advise2 (t) {
 		// 	var A = dcl(null, {
 		// 		m1: dcl.advise({
