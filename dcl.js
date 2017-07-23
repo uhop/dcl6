@@ -17,8 +17,7 @@
 			} else if (commonBase[pname].isPrototypeOf(base[pname])) {
 				commonBase = base;
 			} else {
-				throw new Error('incompatible bases');
-				// dcl._error('incompatible bases');
+				dcl._error('incompatible bases');
 			}
 		}
 		return commonBase;
@@ -66,10 +65,7 @@
 		}
 
 		// final checks and return
-		if (connectivity.size != output.length) {
-			throw new Error('dependency cycle');
-			// dcl._error('cycle', bases);
-		}
+		if (connectivity.size != output.length) { dcl._error('dependency cycle'); }
 		return output.reverse();
 	}
 
@@ -96,16 +92,39 @@
 		return obj;
 	};
 
-	const collectAdvice = (target, source, path) => {
+	const collectChainAdvice = (target, source, path) => {
 		const fn = getPath(source, path);
 		if (fn) {
-			if (typeof fn != 'function') {
-				throw new Error(path + ' advice is not function');
-			}
+			if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
 			if (target[path]) {
 				target[path].push(fn);
 			} else {
 				target[path] = [fn];
+			}
+		}
+	};
+
+	const collectAroundAdvice = (target, source, path, proto, name) => {
+		if (!target.hasOwnProperty(path)) {
+			const fn = getPath(source, path);
+			if (fn) {
+				if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
+				if (target[path]) {
+					target[path].push(fn);
+				} else {
+					target[path] = [fn];
+				}
+			} else {
+				if (Object[pname].hasOwnProperty.call(proto, name)) {
+					const prop = Object.getOwnPropertyDescriptor(name);
+					if (prop.get || prop.set) { // accessor
+						if (path.charAt(3) === '.') {
+							target[path] = null;
+						}
+					} else { // data
+						target[path] = null;
+					}
+				}
 			}
 		}
 	};
@@ -169,9 +188,7 @@
 		iterateOverPrototypes(source, proto => {
 			const prop = Object.getOwnPropertyDescriptor(proto, key);
 			if (prop) {
-				if (prop.get || prop.set) {
-					throw new Error('wrong value descriptor');
-				}
+				if (prop.get || prop.set) { dcl._error('wrong value descriptor'); }
 				values.push(prop.value);
 			}
 		});
@@ -239,18 +256,30 @@
 	};
 
 	const makeValueStubWithGetters = (fn, advice) => {
+		let getter = function () { return fn; };
+		if (advice['get.around']) {
+			getter = advice['get.around'](getter);
+			if (typeof getter != 'function') { dcl._error('getter around advice should return function'); }
+		}
 		return function () {
-			let i, fns = advice['get.before'], result = fn, thrown = false;
+			let i, fns = advice['get.before'], result, thrown = false;
 			// run getter advices
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].apply(this, arguments);
+					fns[i].call(this);
 				}
+			}
+			try {
+				result = getter.call(this);
+			} catch (e) {
+				result = e;
+				thrown = true;
 			}
 			fns = advice['get.after'];
 			if (fns) {
+				const args = [];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result);
+					fns[i].call(this, args, result);
 				}
 			}
 			if (thrown) {
@@ -283,6 +312,10 @@
 	};
 
 	const makeValueStubDefault = (fn, advice) => {
+		if (advice.around) {
+			fn = advice.around(fn);
+			if (typeof fn != 'function') { dcl._error('around advice should return function'); }
+		}
 		return function () {
 			let i, fns = advice.before, result, thrown = false;
 			// run main advices
@@ -310,23 +343,31 @@
 		};
 	};
 
+	const haveAdvices = (advice, prefix, suffix) => advice[prefix + suffix] && advice[prefix + suffix].length;
+	const haveAnyAdvices = (advice, prefix='') => haveAdvices(advice, prefix, 'before') ||
+		haveAdvices(advice, prefix, 'after') || advice[prefix + 'around'];
+
 	const makeValueStub = (fn, advice) => {
-		const stub = (advice['get.before'] || advice['get.after'] ? makeValueStubWithGetters : makeValueStubDefault)(fn, advice);
+		const stub = (haveAnyAdvices(advice, 'get.') ? makeValueStubWithGetters : makeValueStubDefault)(fn, advice);
 		stub[dcl.advice] = advice;
 		return stub;
 	};
 
-	const haveAdvices = (advice, prefix, suffix) => advice[prefix + suffix] && advice[prefix + suffix].length;
-	const haveAnyAdvices = (advice, prefix) => haveAdvices(advice, prefix, 'before') ||
-		haveAdvices(advice, prefix, 'after') || haveAdvices(advice, prefix, 'around');
-
-	const makeGetStub = (fn, advice) => {
-		if (!fn) {
-			if (!haveAnyAdvices(advice, 'get.')) { return fn; }
-			fn = function () {};
+	const makeGetStub = (getter, advice) => {
+		if (!getter) {
+			if (!haveAnyAdvices(advice, 'get.')) { return getter; }
+			getter = function () {};
+		}
+		if (advice['get.around']) {
+			getter = advice['get.around'](getter);
+			if (typeof getter != 'function') { dcl._error('getter around advice should return function'); }
+		}
+		let decorator, result;
+		if (haveAnyAdvices(advice)) {
+			decorator = makeValueStubDefault(function () { return result.apply(this, arguments); }, advice);
 		}
 		const stub = function () {
-			let i, fns = advice['get.before'], result, thrown = false;
+			let i, fns = advice['get.before'], thrown = false;
 			// run getter advices
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
@@ -334,30 +375,31 @@
 				}
 			}
 			try {
-				result = fn.call(this);
+				result = getter.call(this);
 			} catch (e) {
 				result = e;
 				thrown = true;
 			}
 			fns = advice['get.after'];
 			if (fns) {
+				const args = [];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, [], result);
+					fns[i].call(this, args, result);
 				}
 			}
 			if (thrown) {
 				throw result;
 			}
-			return result;
+			return decorator ? decorator : result;
 		};
 		stub[dcl.advice] = advice;
 		return stub;
 	};
 
-	const makeSetStub = (fn, advice) => {
-		if (!fn) {
-			if (!haveAnyAdvices(advice, 'get.')) { return fn; }
-			fn = function () {};
+	const makeSetStub = (setter, advice) => {
+		if (!setter) {
+			if (!haveAnyAdvices(advice, 'set.')) { return setter; }
+			setter = function () {};
 		}
 		const stub = function (value) {
 			let i, fns = advice['set.before'], result, thrown = false;
@@ -368,15 +410,16 @@
 				}
 			}
 			try {
-				fn.call(this, value);
+				setter.call(this, value);
 			} catch (e) {
 				result = e;
 				thrown = true;
 			}
 			fns = advice['set.after'];
 			if (fns) {
+				const args = [value];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, [value], undefined);
+					fns[i].call(this, args);
 				}
 			}
 			if (thrown) {
@@ -388,6 +431,7 @@
 	};
 
 	const makeCtrStub = (fn, advice) => {
+		dcl._checkAdviceForCtr();
 		return new Proxy(fn, {construct: function (target, args) {
 			let i, fns = advice.before, result, thrown = false;
 			// run main advices
@@ -474,31 +518,26 @@
 		// collect directives & advices from the interrim constructors
 		const directives = {}, advices = {};
 
-		const collectDirectives = ownDirectives => name => {
+		const collectDirectives = (ownDirectives, proto) => name => {
 			const advice = typeof ownDirectives[name] == 'string' ? {chainWith: ownDirectives[name]} : ownDirectives[name];
 			if (typeof advice.chainWith == 'string') {
-				if (name === cname) {
-					throw new Error('no chaining rule for constructors: always "after"');
-				}
-				if (!directives.hasOwnProperty(name)) {
-					directives[name] = advice.chainWith;
-				} else if (directives[name] !== advice.chainWith) {
-					throw new Error('conflicting chaining directives');
-				}
+				if (name === cname) { dcl._error('no chaining rule for constructors: always "after"'); }
+				if (!directives.hasOwnProperty(name)) { directives[name] = advice.chainWith; }
+				else if (directives[name] !== advice.chainWith) { dcl._error('conflicting chaining directives'); }
 			}
-			if (!advices.hasOwnProperty(name)) {
-				advices[name] = {};
-			}
+			if (!advices.hasOwnProperty(name)) { advices[name] = {}; }
 			const target = advices[name];
-			['get.before', 'get.after', 'get.around', 'set.before', 'set.after', 'set.around', 'before', 'after', 'around'].
-				forEach(name => collectAdvice(target, advice, name));
+			['get.before', 'get.after', 'set.before', 'set.after', 'before', 'after'].
+				forEach(path => collectChainAdvice(target, advice, path));
+			['get.around', 'set.around', 'around'].
+				forEach(path => collectAroundAdvice(target, advice, path, proto, name));
 		};
 
 		ctrs.forEach(mixin => {
 			const ownDirectives = Object[pname].hasOwnProperty.call(mixin, dcl.directives) && mixin[dcl.directives] ||
 				Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
 			if (ownDirectives) {
-				const collect = collectDirectives(ownDirectives);
+				const collect = collectDirectives(ownDirectives, mixin[pname]);
 				Object.getOwnPropertyNames(ownDirectives).forEach(collect);
 				Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
 			}
@@ -507,7 +546,7 @@
 		const original = {}, reverted = {}, originalRemove = [];
 
 		const createDirectives = name => {
-			if (name === cname) return;
+			if (name === cname) { return; }
 
 			const advice = advices[name];
 			// normalize advice chains
@@ -524,10 +563,8 @@
 				original[name] = prop;
 				if (prop.get || prop.set) {
 					// accessor descriptor
-					if (directives.hasOwnProperty(name)) {
-						throw new Error('chaining cannot be applied to accessors');
-					}
-					if (haveAnyAdvices(advice, '')) {
+					if (directives.hasOwnProperty(name)) { dcl._error('chaining cannot be applied to accessors'); }
+					if (haveAnyAdvices(advice)) {
 						newProp = {
 							value: makeValueStubFromGetter(prop.get, advice),
 							configurable: true,
@@ -545,14 +582,10 @@
 				} else {
 					// data descriptor
 					let value = prop.value;
-					if (typeof value !== 'function') {
-						throw new Error('wrong value');
-					}
+					if (typeof value !== 'function') { dcl._error('wrong value'); }
 					if (directives.hasOwnProperty(name)) {
 						const weaver = dcl.weavers[directives[name]];
-						if (!weaver) {
-							throw new Error('there is no weaver: ' + directives[name]);
-						}
+						if (!weaver) { dcl._error('there is no weaver: ' + directives[name]); }
 						value = weaver(collectValues(ctr[pname], name));
 					}
 					newProp = {
@@ -624,7 +657,9 @@
 	dcl.collectPropertyDescriptors = collectPropertyDescriptors;
 
 	// internals
+	dcl._error = text => { throw new Error(text); };
 	dcl._makeCtr = ctr => ctr;
+	dcl._checkAdviceForCtr = () => {};
 
 	return dcl;
 });
