@@ -28,40 +28,44 @@ function (module, unit, dcl, Mixer, Replacer) {
 			eval(t.TEST('x.c === null'));
 			eval(t.TEST('x.d === f'));
 			eval(t.TEST('x.f === f'));
-		// },
-		// function test_Replacer (t) {
-		// 	var f = function () {};
-		//
-		// 	var A = dcl(Replacer, {
-		// 		declaredClass: 'A',
-		// 		a: 1,
-		// 		b: 'two',
-		// 		c: null,
-		// 		d: f
-		// 	});
-		//
-		// 	var x = new A({
-		// 		a: 5,
-		// 		b: false,
-		// 		f: f
-		// 	});
-		//
-		// 	eval(t.TEST('x.a === 5'));
-		// 	eval(t.TEST('x.b === false'));
-		// 	eval(t.TEST('x.c === null'));
-		// 	eval(t.TEST('x.d === f'));
-		// 	eval(t.TEST('!("f" in x)'));
-		// },
-		// function test_Replacer_with_mixins (t) {
-		// 	var A = dcl(Replacer, {a: 0}),
-		// 		B = dcl(Replacer, {b: 0}),
-		// 		C = dcl([Replacer, A, B]);
-		//
-		// 	var x = new C({a: 1, b: 2, c: 3});
-		//
-		// 	eval(t.TEST('x.a === 1'));
-		// 	eval(t.TEST('x.b === 2'));
-		// 	eval(t.TEST('!("c" in x)'));
+		},
+		function test_Replacer (t) {
+			const f = function () {};
+
+			const A = dcl(Replacer, Base => class extends Base {
+				static get [dcl.declaredClass] () { return 'A'; }
+			});
+			A.prototype.a = 1;
+			A.prototype.b = 'two';
+			A.prototype.c = null;
+			A.prototype.d = f;
+
+			const x = new A({
+				a: 5,
+				b: false,
+				f: f
+			});
+
+			eval(t.TEST('x.a === 5'));
+			eval(t.TEST('x.b === false'));
+			eval(t.TEST('x.c === null'));
+			eval(t.TEST('x.d === f'));
+			eval(t.TEST('!("f" in x)'));
+		},
+		function test_Replacer_with_mixins (t) {
+			const A = dcl(Replacer);
+			A.prototype.a = 0;
+
+			const B = dcl(Replacer);
+			B.prototype.b = 0;
+
+			const C = dcl(Replacer, A, B);
+
+			const x = new C({a: 1, b: 2, c: 3});
+
+			eval(t.TEST('x.a === 1'));
+			eval(t.TEST('x.b === 2'));
+			eval(t.TEST('!("c" in x)'));
 		}
 	]);
 
