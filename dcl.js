@@ -167,7 +167,7 @@
 
 		const collect = name => {
 			if (!Object[pname].hasOwnProperty.call(props, name)) {
-				props[name] = Object.getOwnPropertyDescriptor(proto, name);
+				props[name] = Object.getOwnPropertyDescriptor(o, name);
 			}
 		};
 
