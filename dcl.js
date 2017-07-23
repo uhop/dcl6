@@ -24,13 +24,11 @@
 		// build a connectivity matrix
 		const connectivity = new Map();
 		mixins.forEach(mixins => {
-			mixins.forEach(function (mixin, index) {
+			mixins.forEach((mixin, index) => {
 				if (connectivity.has(mixin)) {
 					const value = connectivity.get(mixin);
-					++value.counter;
-					if (index) {
-						value.links.push(mixins[index - 1]);
-					}
+					index + 1 != mixins.length && ++value.counter;
+					index && value.links.push(mixins[index - 1]);
 				} else {
 					connectivity.set(mixin, {
 						links:   index ? [mixins[index - 1]] : [],
@@ -44,9 +42,10 @@
 		const output = [], unreferenced = [];
 		// find unreferenced bases
 		mixins.forEach(mixins => {
-			const last = mixins[mixins.length - 1];
-			if (!connectivity.get(last).counter) {
+			const last = mixins[mixins.length - 1], data = connectivity.get(last);
+			if (!data.pushed && !data.counter) {
 				unreferenced.push(last);
+				data.pushed = true;
 			}
 		});
 		while (unreferenced.length) {
@@ -55,9 +54,7 @@
 			const value = connectivity.get(mixin);
 			value.links.forEach(mixin => {
 				const value = connectivity.get(mixin);
-				if (!--value.counter) {
-					unreferenced.push(mixin);
-				}
+				!--value.counter && unreferenced.push(mixin);
 			});
 		}
 
@@ -205,7 +202,7 @@
 
 	const makeValueStub = (fn, advice) => {
 		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get.')) { return fn; }
-		fn = fn || function () {};
+		fn = fn || (() => {});
 		const stub = function () {
 			let i, fns = advice['get.before'], result = fn, thrown = false;
 			// run getter advices
@@ -249,12 +246,13 @@
 			return result;
 		};
 		stub[dcl.advice] = advice;
+		advice.value = fn;
 		return stub;
 	};
 
 	const makeGetStub = (getter, advice) => {
 		if (!hasSideAdvices(advice, 'get.')) { return getter; }
-		getter = getter || function () {};
+		getter = getter || (() => {});
 		const stub = function () {
 			let i, fns = advice['get.before'], result, thrown = false;
 			// run getter advices
@@ -282,12 +280,13 @@
 			return result;
 		};
 		stub[dcl.advice] = advice;
+		advice.getter = getter;
 		return stub;
 	};
 
 	const makeSetStub = (setter, advice) => {
 		if (!hasSideAdvices(advice, 'set.')) { return setter; }
-		setter = setter || function () {};
+		setter = setter || (() => {});
 		const stub = function (value) {
 			let i, fns = advice['set.before'], result, thrown = false;
 			// run setter advices
@@ -314,6 +313,7 @@
 			}
 		};
 		stub[dcl.advice] = advice;
+		advice.setter = setter;
 		return stub;
 	};
 
