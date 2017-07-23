@@ -203,77 +203,17 @@
 		};
 	};
 
-	const makeValueStubFromGetter = (getter, advice) => {
-		const stub = function () {
-			let i, fns = advice['get.before'], result, thrown = false;
-			// run getter advices
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].apply(this, arguments);
-				}
-			}
-			try {
-				result = getter.call(this);
-			} catch (e) {
-				result = e;
-				thrown = true;
-			}
-			fns = advice['get.after'];
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result);
-				}
-			}
-			if (thrown) {
-				throw result;
-			}
-			// run main advices
-			fns = advice.before;
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].apply(this, arguments);
-				}
-			}
-			try {
-				result = result.apply(this, arguments);
-			} catch (e) {
-				result = e;
-				thrown = true;
-			}
-			fns = advice.after;
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result);
-				}
-			}
-			if (thrown) {
-				throw result;
-			}
-			return result;
-		};
-		stub[dcl.advice] = advice;
-		return stub;
-	};
+	const hasSideAdvice = (advice, prefix, suffix) => advice[prefix + suffix] && advice[prefix + suffix].length;
+	const hasSideAdvices = (advice, prefix='') => hasSideAdvice(advice, prefix, 'before') || hasSideAdvice(advice, prefix, 'after');
 
-	const makeValueStubWithGetters = (fn, advice) => {
-		let getter = function () { return fn; };
-		if (advice['get.around']) {
-			getter = advice['get.around'](getter);
-			if (typeof getter != 'function') { dcl._error('getter around advice should return function'); }
-		}
-		return function () {
-			let i, fns = advice['get.before'], result, thrown = false;
+	const makeValueStub = (fn, advice) => {
+		const stub = function () {
+			let i, fns = advice['get.before'], result = fn, thrown = false;
 			// run getter advices
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].call(this);
 				}
-			}
-			try {
-				result = getter.call(this);
-			} catch (e) {
-				result = e;
-				thrown = true;
 			}
 			fns = advice['get.after'];
 			if (fns) {
@@ -309,65 +249,15 @@
 			}
 			return result;
 		};
-	};
-
-	const makeValueStubDefault = (fn, advice) => {
-		if (advice.around) {
-			fn = advice.around(fn);
-			if (typeof fn != 'function') { dcl._error('around advice should return function'); }
-		}
-		return function () {
-			let i, fns = advice.before, result, thrown = false;
-			// run main advices
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].apply(this, arguments);
-				}
-			}
-			try {
-				result = fn.apply(this, arguments);
-			} catch (e) {
-				result = e;
-				thrown = true;
-			}
-			fns = advice.after;
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result);
-				}
-			}
-			if (thrown) {
-				throw result;
-			}
-			return result;
-		};
-	};
-
-	const haveAdvices = (advice, prefix, suffix) => advice[prefix + suffix] && advice[prefix + suffix].length;
-	const haveAnyAdvices = (advice, prefix='') => haveAdvices(advice, prefix, 'before') ||
-		haveAdvices(advice, prefix, 'after') || advice[prefix + 'around'];
-
-	const makeValueStub = (fn, advice) => {
-		const stub = (haveAnyAdvices(advice, 'get.') ? makeValueStubWithGetters : makeValueStubDefault)(fn, advice);
 		stub[dcl.advice] = advice;
 		return stub;
 	};
 
 	const makeGetStub = (getter, advice) => {
-		if (!getter) {
-			if (!haveAnyAdvices(advice, 'get.')) { return getter; }
-			getter = function () {};
-		}
-		if (advice['get.around']) {
-			getter = advice['get.around'](getter);
-			if (typeof getter != 'function') { dcl._error('getter around advice should return function'); }
-		}
-		let decorator, result;
-		if (haveAnyAdvices(advice)) {
-			decorator = makeValueStubDefault(function () { return result.apply(this, arguments); }, advice);
-		}
+		if (!hasSideAdvices(advice, 'get.')) { return getter; }
+		getter = getter || function () {};
 		const stub = function () {
-			let i, fns = advice['get.before'], thrown = false;
+			let i, fns = advice['get.before'], result, thrown = false;
 			// run getter advices
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
@@ -390,17 +280,15 @@
 			if (thrown) {
 				throw result;
 			}
-			return decorator ? decorator : result;
+			return result;
 		};
 		stub[dcl.advice] = advice;
 		return stub;
 	};
 
 	const makeSetStub = (setter, advice) => {
-		if (!setter) {
-			if (!haveAnyAdvices(advice, 'set.')) { return setter; }
-			setter = function () {};
-		}
+		if (!hasSideAdvices(advice, 'set.')) { return setter; }
+		setter = setter || function () {};
 		const stub = function (value) {
 			let i, fns = advice['set.before'], result, thrown = false;
 			// run setter advices
@@ -546,41 +434,52 @@
 		const original = {}, reverted = {}, originalRemove = [];
 
 		const createDirectives = name => {
-			if (name === cname) { return; }
+			if (name === cname) { return; } // ignore constructors
 
 			const advice = advices[name];
+
 			// normalize advice chains
 			advice['get.before'] && advice['get.before'].reverse();
 			advice['set.before'] && advice['set.before'].reverse();
 			advice.before && advice.before.reverse();
+
+			// incorporate around advices directly on prototype
+			let prop, newProp;
+			if (advice.around || advice['get.around'] || advice['set.around']) {
+				let replace;
+				prop = getPropertyDescriptor(ctr[pname], name);
+				if (prop.get || prop.set) { // accessor descriptor
+					if (advice['get.around']) { prop.get = advice['get.around'](prop.get); replace = true; }
+					if (advice['set.around']) { prop.set = advice['set.around'](prop.set); replace = true; }
+				} else { // data descriptor
+					if (advice.around) { prop.value = advice.around(prop.value); replace = true; }
+				}
+				if (replace) {
+					Object.defineProperty(ctr[pname], name, prop);
+				} else {
+					prop = null;
+				}
+			}
+
 			// process descriptor
-			let prop = Object.getOwnPropertyDescriptor(ctr[pname], name), newProp;
+			if (!prop) {
+				prop = Object.getOwnPropertyDescriptor(ctr[pname], name);
+			}
 			if (!prop) {
 				originalRemove.push(name);
 				prop = getPropertyDescriptor(ctr[pname], name);
 			}
 			if (prop) {
 				original[name] = prop;
-				if (prop.get || prop.set) {
-					// accessor descriptor
+				if (prop.get || prop.set) { // accessor descriptor
 					if (directives.hasOwnProperty(name)) { dcl._error('chaining cannot be applied to accessors'); }
-					if (haveAnyAdvices(advice)) {
-						newProp = {
-							value: makeValueStubFromGetter(prop.get, advice),
-							configurable: true,
-							enumerable:   prop.enumerable,
-							writable:     true
-						};
-					} else {
-						newProp = {
-							get: makeGetStub(prop.get, advice),
-							set: makeSetStub(prop.set, advice),
-							configurable: true,
-							enumerable:   prop.enumerable
-						};
-					}
-				} else {
-					// data descriptor
+					newProp = {
+						get: makeGetStub(prop.get, advice),
+						set: makeSetStub(prop.set, advice),
+						configurable: true,
+						enumerable:   prop.enumerable
+					};
+				} else { // data descriptor
 					let value = prop.value;
 					if (typeof value !== 'function') { dcl._error('wrong value'); }
 					if (directives.hasOwnProperty(name)) {
@@ -599,14 +498,14 @@
 				// no descriptor
 				newProp = {
 					value: makeValueStub(nop, advice),
-					configurable: true
+					configurable: true,
+					writable:     true
 				};
 			}
 			reverted[name] = newProp;
 		};
 
 		// apply directives & advices
-		// TODO: add processing directives, for now directives are ignored
 		Object.getOwnPropertyNames(advices).forEach(createDirectives);
 		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
 
