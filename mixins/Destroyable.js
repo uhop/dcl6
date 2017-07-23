@@ -2,8 +2,8 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	var Destroyable = dcl({declaredClass: 'dcl/mixins/Destroyable'});
-	dcl.chainBefore(Destroyable, 'destroy');
-
-	return Destroyable;
+	return dcl(null, Base => class extends Base {
+		static get [dcl.declaredClass] () { return 'dcl/mixins/Destroyable'; }
+		static get [dcl.directives] () { return {destroy: 'chainBefore'}; }
+	});
 });

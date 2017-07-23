@@ -6,44 +6,44 @@
 
 	unit.add(module, [
 		function test_Cleanup (t) {
-			var msgs = [];
+			const msgs = [];
 
-			var A = dcl(null, {
-				constructor: function (n) {
+			const A = dcl(null, Base => class extends Base {
+				constructor (n) {
+					super();
 					this.n = n;
 					msgs.push(this.n);
-				},
-				destroy: function () {
+				}
+				destroy () {
 					msgs.push(-this.n);
 				}
 			});
 
-			var cleanup = function (n) {
-				msgs.push(-n);
-			};
+			const cleanup = n => { msgs.push(-n); };
 
-			var B = dcl(Cleanup, {
-				constructor: function () {
-					var  f1 = this.pushCleanup(new A(1));
+			const B = dcl(Cleanup, Base => class extends Base {
+				constructor () {
+					super();
+					const f1 = this.pushCleanup(new A(1));
 					this.f2 = this.pushCleanup(2, cleanup);
 					this.pushCleanup(new A(3));
 					this.pushCleanup(new A(4));
 					this.removeCleanup(f1);
 					f1();
 					this.popCleanup();
-				},
-				remove2: function () {
+				}
+				remove2 () {
 					if (this.removeCleanup(this.f2)) {
 						this.f2();
 						this.f2 = null;
 					}
-				},
-				destroy: function () {
+				}
+				destroy () {
 					msgs.push(-99);
 				}
 			});
 
-			var b = new B();
+			const b = new B();
 			eval(t.TEST('msgs.join(",") == "1,3,4,-1,-4"'));
 
 			b.remove2();
