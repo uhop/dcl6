@@ -205,6 +205,7 @@
 
 	const makeValueStub = (fn, advice) => {
 		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get.')) { return fn; }
+		fn = fn || function () {};
 		const stub = function () {
 			let i, fns = advice['get.before'], result = fn, thrown = false;
 			// run getter advices
@@ -430,7 +431,7 @@
 
 			// process descriptor
 			let newProp, prop = getPropertyDescriptor(ctr[pname], name);
-			if (prop) {
+			if (prop) { // guided by descriptor
 				const hasDirective = Object[pname].hasOwnProperty.call(directives, name);
 				if (prop.get || prop.set) { // accessor descriptor
 					if (hasDirective) { dcl._error('chaining cannot be applied to accessors'); }
@@ -457,14 +458,23 @@
 					};
 					if (newProp.value === prop.value) { newProp = null; }
 				}
-			} else {
+			} else { // guided by advice
 				// no descriptor
-				newProp = {
-					value: makeValueStub(nop, advice),
-					configurable: true,
-					writable:     true
-				};
-				if (newProp.value === nop) { newProp = null; }
+				if (hasSideAdvices(advice)) { // data descriptor
+					newProp = {
+						value: makeValueStub(null, advice),
+						configurable: true,
+						writable:     true
+					};
+					if (!newProp.value) { newProp = null; }
+				} else { // accessor descriptor
+					newProp = {
+						get: makeGetStub(null, advice),
+						set: makeSetStub(null, advice),
+						configurable: true
+					};
+					if (!newProp.get && !newProp.set) { newProp = null; }
+				}
 			}
 			if (newProp) {
 				if (prop && Object[pname].hasOwnProperty.call(ctr[pname], name)) {
