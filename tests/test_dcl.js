@@ -131,55 +131,60 @@
 			const z = new (dcl(A, B, C));
 			eval(t.TEST('z.a === "ABC"'));
 			eval(t.TEST('z.b === "C"'));
+		},
+		function test_postscript2 (t) {
+			const A = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'A';
+				}
+				postscript () {
+					this.a = this.a || '';
+					this.a += 'P';
+				}
+				static get [dcl.directives] () {
+					return {
+						constructor: {
+							after: function () {
+								this.postscript();
+							}
+						}
+					};
+				}
+			});
+
+			const B = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'B';
+				}
+			});
+
+			const C = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'C';
+				}
+			});
+
+			const x = new (dcl(A));
+			eval(t.TEST('x.a === "AP"'));
+
+			const y = new (dcl(A, B));
+			eval(t.TEST('y.a === "ABP"'));
+
+			const z = new (dcl(A, B, C));
+			eval(t.TEST('z.a === "ABCP"'));
+
+			const m = new (dcl(B, A));
+			eval(t.TEST('m.a === "BAP"'));
+
+			const n = new (dcl(C, A, B));
+			eval(t.TEST('n.a === "CABP"'));
 		}
-		// function test_postscript2 (t) {
-		// 	var A = dcl(null, {
-		// 		constructor: dcl.advise({
-		// 			around: function (sup) {
-		// 				return function () {
-		// 					if (!this.a) { this.a = ''; }
-		// 					this.a += 'A';
-		// 				};
-		// 			},
-		// 			after: function () {
-		// 				this.postscript();
-		// 			}
-		// 		}),
-		// 		postscript: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'P';
-		// 		}
-		// 	});
-		//
-		// 	var B = dcl(null, {
-		// 		constructor: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'B';
-		// 		}
-		// 	});
-		//
-		// 	var C = dcl(null, {
-		// 		constructor: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'C';
-		// 		}
-		// 	});
-		//
-		// 	var x = new (dcl(A, {}));
-		// 	eval(t.TEST('x.a === "AP"'));
-		//
-		// 	var y = new (dcl([A, B], {}));
-		// 	eval(t.TEST('y.a === "ABP"'));
-		//
-		// 	var z = new (dcl([A, B, C], {}));
-		// 	eval(t.TEST('z.a === "ABCP"'));
-		//
-		// 	var m = new (dcl([B, A], {}));
-		// 	eval(t.TEST('m.a === "AP"'));
-		//
-		// 	var n = new (dcl([C, A, B], {}));
-		// 	eval(t.TEST('n.a === "ABP"'));
-		// },
 		// function test_advise (t) {
 		// 	var A = dcl(null, {
 		// 		m1: dcl.advise({
