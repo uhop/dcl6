@@ -75,6 +75,7 @@
 			const remove = meta[action + 'Remove'];
 			remove && remove.forEach(name => delete base[pname][name])
 			meta[action] && Object.defineProperties(base[pname], meta[action]);
+			return meta.ctr;
 		}
 		return base;
 	};
@@ -216,8 +217,9 @@
 
 	const copyOwnDescriptors = (target, source) => {
 		const copyOwnDescriptor = key => {
-			const prop = Object.getOwnPropertyDescriptor(source, key);
-			Object.defineProperty(target, key, prop);
+			if (!Object[pname].hasOwnProperty.call(target, key)) {
+				Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+			}
 		};
 		Object.getOwnPropertyNames(source).forEach(copyOwnDescriptor);
 		Object.getOwnPropertySymbols(source).forEach(copyOwnDescriptor);
@@ -396,12 +398,7 @@
 
 	function dcl(base, ...mixins) {
 		// normalize parameters
-		if (!mixins.length) {
-			mixins = [base];
-			base = Object;
-		} else if (!base) {
-			base = Object;
-		}
+		base = base || Object;
 
 		// collect mixins and bases
 		const bases = [], mixes = [], meta = base[dcl.meta];
@@ -422,26 +419,25 @@
 		});
 
 		// calculate the common base, and necessary mixins (C3MRO)
-		let commonBase = findCommonBase(bases), commonMixins = c3mro(mixes);
+		const originalBase = base;
+		let commonBase = base = findCommonBase(bases), commonMixins = mixins = c3mro(mixes);
 
 		// see, if we can use our base directly
 		if (meta) {
 			if (meta.base === commonBase && meta.mixins.length <= commonMixins.length) {
 				const last = meta.mixins.length - 1;
 				if (last >= 0 && meta.mixins[last] === commonMixins[last]) {
-					commonBase = base;
+					commonBase = originalBase;
 					commonMixins = commonMixins.slice(last + 1);
 				}
 			}
 		}
 
 		// create a prototype and collect interrim constructors
-		const ctrs = [commonBase];
 		let ctr = updateDecorations(commonBase, 'original');
 		commonMixins.forEach(mixin => {
 			ctr = mixin(ctr);
 			decorateAroundAdvices(ctr);
-			ctrs.push(ctr);
 		});
 		updateDecorations(commonBase, 'reverted');
 
@@ -461,7 +457,7 @@
 				forEach(path => collectSideAdvice(target, advice, path));
 		};
 
-		ctrs.forEach(mixin => {
+		collectValues(ctr[pname], cname).reverse().forEach(mixin => {
 			const ownDirectives = Object[pname].hasOwnProperty.call(mixin, dcl.directives) && mixin[dcl.directives] ||
 				Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
 			if (ownDirectives) {
@@ -538,9 +534,13 @@
 		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
 
 		// finalize a constructor
+		ctr[dcl.meta] = {original, originalRemove, reverted, mixins, base, ctr};
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
 			ctr[pname].hasOwnProperty(dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
+		if (name && name !== 'Object') {
+			updateValue(ctr, 'name', name);
+		}
 		if (Object[pname].hasOwnProperty.call(advices, cname)) {
 			const prop = Object.getOwnPropertyDescriptor(ctr[pname], cname);
 			original[cname] = prop;
@@ -554,15 +554,7 @@
 				writable:     prop.writable
 			};
 		}
-		if (name && name !== 'Object') {
-			updateValue(ctr, 'name', name);
-		}
 		Object.defineProperties(ctr[pname], reverted);
-		ctr[dcl.meta] = {
-			original, originalRemove, reverted,
-			base: commonBase,
-			mixins: commonMixins
-		};
 		return dcl._makeCtr(ctr);
 	}
 

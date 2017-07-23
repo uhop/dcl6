@@ -55,7 +55,7 @@
 
 			eval(t.TEST('x.b === "DCB"'));
 			eval(t.TEST('x.c === "BCD"'));
-		}
+		},
 		// function test_isInstanceOf (t) {
 		// 	var A = dcl(null, {});
 		// 	var B = dcl(null, {});
@@ -77,56 +77,61 @@
 		// 	eval(t.TEST('!dcl.isInstanceOf(y, C)'));
 		// 	eval(t.TEST('dcl.isInstanceOf(y, D)'));
 		// },
-		// function test_postscript (t) {
-		// 	var A = dcl(null, {
-		// 		constructor: dcl.advise({
-		// 			around: function (sup) {
-		// 				return function () {
-		// 					if (!this.a) { this.a = ''; }
-		// 					this.a += 'A';
-		// 				};
-		// 			},
-		// 			after: function () {
-		// 				this.postscript();
-		// 			}
-		// 		}),
-		// 		postscript: function () {
-		// 			this.b = 'A';
-		// 		}
-		// 	});
-		//
-		// 	var B = dcl(null, {
-		// 		constructor: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'B';
-		// 		},
-		// 		postscript: function () {
-		// 			this.b = 'B';
-		// 		}
-		// 	});
-		//
-		// 	var C = dcl(null, {
-		// 		constructor: function () {
-		// 			if (!this.a) { this.a = ''; }
-		// 			this.a += 'C';
-		// 		},
-		// 		postscript: function () {
-		// 			this.b = 'C';
-		// 		}
-		// 	});
-		//
-		// 	var x = new (dcl(A, {}));
-		// 	eval(t.TEST('x.a === "A"'));
-		// 	eval(t.TEST('x.b === "A"'));
-		//
-		// 	var y = new (dcl([A, B], {}));
-		// 	eval(t.TEST('y.a === "AB"'));
-		// 	eval(t.TEST('y.b === "B"'));
-		//
-		// 	var z = new (dcl([A, B, C], {}));
-		// 	eval(t.TEST('z.a === "ABC"'));
-		// 	eval(t.TEST('z.b === "C"'));
-		// },
+		function test_postscript (t) {
+			const A = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'A';
+				}
+				postscript () {
+					this.b = 'A';
+				}
+				static get [dcl.directives] () {
+					return {
+						constructor: {
+							after: function () {
+								this.postscript();
+							}
+						}
+					};
+				}
+			});
+
+			const B = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'B';
+				}
+				postscript () {
+					this.b = 'B';
+				}
+			});
+
+			const C = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'C';
+				}
+				postscript () {
+					this.b = 'C';
+				}
+			});
+
+			const x = new (dcl(A));
+			eval(t.TEST('x.a === "A"'));
+			eval(t.TEST('x.b === "A"'));
+
+			const y = new (dcl(A, B));
+			eval(t.TEST('y.a === "AB"'));
+			eval(t.TEST('y.b === "B"'));
+
+			const z = new (dcl(A, B, C));
+			eval(t.TEST('z.a === "ABC"'));
+			eval(t.TEST('z.b === "C"'));
+		}
 		// function test_postscript2 (t) {
 		// 	var A = dcl(null, {
 		// 		constructor: dcl.advise({
