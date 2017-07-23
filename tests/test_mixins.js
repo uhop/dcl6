@@ -1,5 +1,5 @@
 /* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
-(['module', 'heya-unit', '../dcl', '../mixins/Cleanup'], function (module, unit, dcl, Cleanup) {
+(['module', 'heya-unit', '../dcl', '../mixins/Cleanup', '../mixins/Named'], function (module, unit, dcl, Cleanup, Named) {
 	'use strict';
 
 	// tests
@@ -54,6 +54,13 @@
 
 			b.destroy();
 			eval(t.TEST('msgs.join(",") == "1,3,4,-1,-4,-2,-99,-3"'));
+		},
+		function test_Named (t) {
+			const A = dcl(null, Named('X'));
+			eval(t.TEST('A.name === "X"'));
+
+			const B = dcl(null, Named('X'), Named('Y'));
+			eval(t.TEST('B.name === "Y"'));
 		}
 	]);
 
