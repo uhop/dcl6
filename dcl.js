@@ -92,7 +92,7 @@
 		return obj;
 	};
 
-	const collectChainAdvice = (target, source, path) => {
+	const collectSideAdvice = (target, source, path) => {
 		const fn = getPath(source, path);
 		if (fn) {
 			if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
@@ -109,11 +109,7 @@
 			const fn = getPath(source, path);
 			if (fn) {
 				if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
-				if (target[path]) {
-					target[path].push(fn);
-				} else {
-					target[path] = [fn];
-				}
+				target[path] = fn;
 			} else {
 				if (Object[pname].hasOwnProperty.call(proto, name)) {
 					const prop = Object.getOwnPropertyDescriptor(proto, name);
@@ -127,6 +123,50 @@
 				}
 			}
 		}
+	};
+
+	const decorateAroundAdvices = ctr => {
+		const ownDirectives = Object[pname].hasOwnProperty.call(ctr, dcl.directives) && ctr[dcl.directives] ||
+			Object[pname].hasOwnProperty.call(ctr[pname], dcl.directives) && ctr[pname][dcl.directives];
+		ownDirectives && Object.keys(ownDirectives).forEach(name => {
+			const advice = ownDirectives[name];
+			if (advice.around || advice.get && advice.get.around || advise.set && advice.set.around) {
+				let replace, prop = getPropertyDescriptor(ctr[pname], name);
+				if (prop) { // guided by existing descriptor
+					if (prop.get || prop.set) { // accessor descriptor
+						if (advice.get && advice.get.around) {
+							prop.get = advice.get.around.call(advice, prop.get);
+							replace = true;
+						}
+						if (advice.set && advice.set.around) {
+							prop.set = advice.set.around.call(advice, prop.set);
+							replace = true;
+						}
+					} else { // data descriptor
+						if (advice.around) {
+							prop.value = advice.around(prop.value);
+							replace = true;
+						}
+					}
+				} else { // guided by existing advices
+					replace = true;
+					if (advice.around) { // data descriptor
+						prop = {
+							value: advice.around(Object[pname][name] || null),
+							configurable: true,
+							writable:     true
+						};
+					} else { // accessor descriptor
+						prop = {
+							get: advice.get && advice.get.around ? advice.get.around.call(advice, null) : null,
+							set: advice.set && advice.set.around ? advice.set.around.call(advice, null) : null,
+							configurable: true
+						};
+					}
+				}
+				replace && Object.defineProperty(ctr[pname], name, prop);
+			}
+		});
 	};
 
 	const iterateOverPrototypes = (o, callback) => {
@@ -207,6 +247,7 @@
 	const hasSideAdvices = (advice, prefix='') => hasSideAdvice(advice, prefix, 'before') || hasSideAdvice(advice, prefix, 'after');
 
 	const makeValueStub = (fn, advice) => {
+		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get.')) { return fn; }
 		const stub = function () {
 			let i, fns = advice['get.before'], result = fn, thrown = false;
 			// run getter advices
@@ -399,6 +440,7 @@
 		let ctr = updateDecorations(commonBase, 'original');
 		commonMixins.forEach(mixin => {
 			ctr = mixin(ctr);
+			decorateAroundAdvices(ctr);
 			ctrs.push(ctr);
 		});
 		updateDecorations(commonBase, 'reverted');
@@ -416,9 +458,7 @@
 			if (!advices.hasOwnProperty(name)) { advices[name] = {}; }
 			const target = advices[name];
 			['get.before', 'get.after', 'set.before', 'set.after', 'before', 'after'].
-				forEach(path => collectChainAdvice(target, advice, path));
-			['get.around', 'set.around', 'around'].
-				forEach(path => collectAroundAdvice(target, advice, path, proto, name));
+				forEach(path => collectSideAdvice(target, advice, path));
 		};
 
 		ctrs.forEach(mixin => {
@@ -443,34 +483,12 @@
 			advice['set.before'] && advice['set.before'].reverse();
 			advice.before && advice.before.reverse();
 
-			// incorporate around advices directly on prototype
-			let prop, newProp;
-			if (advice.around || advice['get.around'] || advice['set.around']) {
-				let replace;
-				prop = getPropertyDescriptor(ctr[pname], name);
-				if (prop.get || prop.set) { // accessor descriptor
-					if (advice['get.around']) { prop.get = advice['get.around'](prop.get); replace = true; }
-					if (advice['set.around']) { prop.set = advice['set.around'](prop.set); replace = true; }
-				} else { // data descriptor
-					if (advice.around) { prop.value = advice.around(prop.value); replace = true; }
-				}
-				if (replace) {
-					Object.defineProperty(ctr[pname], name, prop);
-				} else {
-					prop = null;
-				}
-			}
-
 			// process descriptor
+			let newProp, prop = Object.getOwnPropertyDescriptor(ctr[pname], name);
 			if (!prop) {
-				prop = Object.getOwnPropertyDescriptor(ctr[pname], name);
-			}
-			if (!prop) {
-				originalRemove.push(name);
 				prop = getPropertyDescriptor(ctr[pname], name);
 			}
 			if (prop) {
-				original[name] = prop;
 				if (prop.get || prop.set) { // accessor descriptor
 					if (directives.hasOwnProperty(name)) { dcl._error('chaining cannot be applied to accessors'); }
 					newProp = {
@@ -479,6 +497,7 @@
 						configurable: true,
 						enumerable:   prop.enumerable
 					};
+					if (newProp.get === prop.get && newProp.set === prop.set) { newProp = null; }
 				} else { // data descriptor
 					let value = prop.value;
 					if (typeof value !== 'function') { dcl._error('wrong value'); }
@@ -493,6 +512,7 @@
 						enumerable:   prop.enumerable,
 						writable:     prop.writable
 					};
+					if (newProp.value === prop.value) { newProp = null; }
 				}
 			} else {
 				// no descriptor
@@ -501,8 +521,16 @@
 					configurable: true,
 					writable:     true
 				};
+				if (newProp.value === prop.value) { newProp = null; }
 			}
-			reverted[name] = newProp;
+			if (newProp) {
+				if (prop && Object[pname].hasOwnProperty.call(ctr[pname], name)) {
+					original[name] = prop;
+				} else {
+					originalRemove.push(name);
+				}
+				reverted[name] = newProp;
+			}
 		};
 
 		// apply directives & advices
@@ -513,7 +541,7 @@
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
 			ctr[pname].hasOwnProperty(dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
-		if (advices[cname]) {
+		if (Object[pname].hasOwnProperty.call(advices, cname)) {
 			const prop = Object.getOwnPropertyDescriptor(ctr[pname], cname);
 			original[cname] = prop;
 			const advice = advices[cname];

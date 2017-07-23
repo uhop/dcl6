@@ -20,7 +20,7 @@
 	// tests
 
 	unit.add(module, [
-		function test_si (t) {
+		function test_simple (t) {
 			const A = dcl(null, Named('A'));
 			const B = dcl(A, Named('B'));
 			const C = dcl(B, Named('C'));
@@ -28,6 +28,136 @@
 			eval(t.TEST('getNames(A) === "A"'));
 			eval(t.TEST('getNames(B) === "A,B"'));
 			eval(t.TEST('getNames(C) === "A,B,C"'));
+		},
+		function test_around (t) {
+			const A = dcl(null, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'A';
+				}
+				m1 () {
+					this.b = 'X';
+				}
+				static get [dcl.directives] () {
+					return {
+						m2: {
+							around: function (sup) {
+								return function () {
+									if (sup) { sup.call(this); }
+									this.c = this.c || '';
+									this.c += '1';
+								};
+							}
+						},
+						m3: {
+							around: function (sup) {
+								return function () {
+									this.d = this.d || '';
+									this.d += 'M';
+									if (sup) { sup.call(this); }
+								};
+							}
+						}
+					};
+				}
+			});
+
+			const a = new A;
+			a.m1();
+			a.m2();
+			a.m3();
+
+			eval(t.TEST('a.a === "A"'));
+			eval(t.TEST('a.b === "X"'));
+			eval(t.TEST('a.c === "1"'));
+			eval(t.TEST('a.d === "M"'));
+
+			const B = dcl(null, A, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'B';
+				}
+				m1 () {
+					this.b = 'Y';
+				}
+				static get [dcl.directives] () {
+					return {
+						m2: {
+							around: function (sup) {
+								return function () {
+									if (sup) { sup.call(this); }
+									this.c = this.c || '';
+									this.c += '2';
+								};
+							}
+						},
+						m3: {
+							around: function (sup) {
+								return function () {
+									this.d = this.d || '';
+									this.d += 'N';
+									if (sup) { sup.call(this); }
+								};
+							}
+						}
+					};
+				}
+			});
+
+			const b = new B;
+			b.m1();
+			b.m2();
+			b.m3();
+
+			eval(t.TEST('b.a === "AB"'));
+			eval(t.TEST('b.b === "Y"'));
+			eval(t.TEST('b.c === "12"'));
+			eval(t.TEST('b.d === "NM"'));
+
+			const C = dcl(B, Base => class extends Base {
+				constructor () {
+					super();
+					this.a = this.a || '';
+					this.a += 'C';
+				}
+				m1 () {
+					this.b = 'Z';
+				}
+				static get [dcl.directives] () {
+					return {
+						m2: {
+							around: function (sup) {
+								return function () {
+									if (sup) { sup.call(this); }
+									this.c = this.c || '';
+									this.c += '3';
+								};
+							}
+						},
+						m3: {
+							around: function (sup) {
+								return function () {
+									this.d = this.d || '';
+									this.d += 'O';
+									if (sup) { sup.call(this); }
+								};
+							}
+						}
+					};
+				}
+			});
+
+			var c = new C;
+			c.m1();
+			c.m2();
+			c.m3();
+
+			eval(t.TEST('c.a === "ABC"'));
+			eval(t.TEST('c.b === "Z"'));
+			eval(t.TEST('c.c === "123"'));
+			eval(t.TEST('c.d === "ONM"'));
 		},
 		function test_diamonds (t) {
 			const A = Named('A');
@@ -71,6 +201,22 @@
 
 			eval(t.TEST('getNames(ABC3) === "A,B,C,ABC,BC,ABC3"'));
 			eval(t.TEST('getNames(ABC4) === "A,B,C,BC,ABC,ABC4"'));
+		},
+		function test_superCall_int (t) {
+			var a = new (dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						toString: {
+							around: function (sup) {
+								return function () {
+									return 'PRE-' + sup.call(this) + '-POST';
+								};
+							}
+						}
+					};
+				}
+			}));
+			eval(t.TEST('a.toString() === "PRE-[object Object]-POST"'));
 		},
 		function test_impossible (t) {
 			const A = Named('A');
