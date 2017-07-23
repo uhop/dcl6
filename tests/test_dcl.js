@@ -264,41 +264,49 @@
 			const y = new (dcl(A, B, C, D, E));
 			y.m1();
 			eval(t.TEST('y.a === "DbBbEAaDa"'));
+		},
+		function test_advise2 (t) {
+			const A = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							before: function () {
+								this.a = this.a || '';
+								this.a += 'Ab';
+							},
+							after: function () {
+								this.a = this.a || '';
+								this.a += 'Aa';
+							}
+						}
+					};
+				}
+			});
+			const B = dcl(null, Base => class extends Base {
+				static get [dcl.directives] () {
+					return {
+						m1: {
+							before: function () {
+								this.a = this.a || '';
+								this.a += 'Bb';
+							},
+							after: function () {
+								this.a = this.a || '';
+								this.a += 'Ba';
+							}
+						}
+					};
+				}
+			});
+
+			const x = new (dcl(A, B));
+			x.m1();
+			eval(t.TEST('x.a === "BbAbAaBa"'));
+
+			const y = new (dcl(B, A));
+			y.m1();
+			eval(t.TEST('y.a === "AbBbBaAa"'));
 		}
-		// function test_advise2 (t) {
-		// 	var A = dcl(null, {
-		// 		m1: dcl.advise({
-		// 			before: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Ab';
-		// 			},
-		// 			after: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Aa';
-		// 			}
-		// 		})
-		// 	});
-		// 	var B = dcl(null, {
-		// 		m1: dcl.advise({
-		// 			before: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Bb';
-		// 			},
-		// 			after: function () {
-		// 				if (!this.a) { this.a = ''; }
-		// 				this.a += 'Ba';
-		// 			}
-		// 		})
-		// 	});
-		//
-		// 	var x = new (dcl([A, B], {}));
-		// 	x.m1();
-		// 	eval(t.TEST('x.a === "BbAbAaBa"'));
-		//
-		// 	var y = new (dcl([B, A], {}));
-		// 	y.m1();
-		// 	eval(t.TEST('y.a === "AbBbBaAa"'));
-		// }
 	]);
 
 	return {};

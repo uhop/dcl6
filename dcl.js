@@ -346,6 +346,14 @@
 		}});
 	};
 
+	function guardedRun (runner, finalizer) {
+		try {
+			runner();
+		} finally {
+			finalizer();
+		}
+	}
+
 	function dcl(base, ...mixins) {
 		// normalize parameters
 		base = base || Object;
@@ -389,11 +397,9 @@
 			ctr = mixin(ctr);
 			decorateAroundAdvices(ctr);
 		});
-		updateDecorations(commonBase, 'reverted');
 
-		// collect directives & advices from the interrim constructors
+		// prepare to collect advices
 		const directives = {}, advices = {};
-
 		const collectDirectives = (ownDirectives, proto) => name => {
 			const advice = typeof ownDirectives[name] == 'string' ? {chainWith: ownDirectives[name]} : ownDirectives[name];
 			if (typeof advice.chainWith == 'string') {
@@ -407,21 +413,10 @@
 				forEach(path => collectSideAdvice(target, advice, path));
 		};
 
-		collectValues(ctr[pname], cname).reverse().forEach(mixin => {
-			const ownDirectives = mixin.hasOwnProperty(dcl.directives) && mixin[dcl.directives] ||
-				Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
-			if (ownDirectives) {
-				const collect = collectDirectives(ownDirectives, mixin[pname]);
-				Object.getOwnPropertyNames(ownDirectives).forEach(collect);
-				Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
-			}
-		});
-
+		// prepare to apply advices
 		const original = {}, reverted = {}, originalRemove = [];
-
 		const createDirectives = name => {
 			if (name === cname) { return; } // ignore constructors
-
 			const advice = advices[name];
 
 			// normalize advice chains
@@ -487,8 +482,23 @@
 		};
 
 		// apply directives & advices
-		Object.getOwnPropertyNames(advices).forEach(createDirectives);
-		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
+		guardedRun(() => {
+			// collect advices
+			collectValues(ctr[pname], cname).reverse().forEach(mixin => {
+				const ownDirectives = mixin.hasOwnProperty(dcl.directives) && mixin[dcl.directives] ||
+					Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
+				if (ownDirectives) {
+					const collect = collectDirectives(ownDirectives, mixin[pname]);
+					Object.getOwnPropertyNames(ownDirectives).forEach(collect);
+					Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
+				}
+			});
+			// apply advices
+			Object.getOwnPropertyNames(advices).forEach(createDirectives);
+			Object.getOwnPropertySymbols(advices).forEach(createDirectives);
+		}, () => {
+			updateDecorations(commonBase, 'reverted');
+		});
 
 		// finalize a constructor
 		ctr[dcl.meta] = {original, originalRemove, reverted, mixins, base, ctr};
