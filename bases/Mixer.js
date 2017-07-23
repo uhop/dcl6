@@ -2,10 +2,11 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	return dcl({
-		declaredClass: 'dcl/bases/Mixer',
-		constructor: function (x) {
-			Object.defineProperties(this, dcl.collectPropertyDescriptors({}, x));
+	return dcl(null, Base => class extends Base {
+		static get [dcl.declaredClass] () { return 'dcl/bases/Mixer'; }
+		constructor (x) {
+			super(x);
+			Object.defineProperties(this, dcl.collectPropertyDescriptors(x));
 		}
 	});
 });

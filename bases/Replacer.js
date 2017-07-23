@@ -2,15 +2,16 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	return dcl({
-		declaredClass: 'dcl/bases/Replacer',
-		constructor: function (x) {
-			var props = dcl.collectPropertyDescriptors({}, x);
-			Object.keys(props).forEach(function (name) {
+	return dcl(null, Base => class extends Base {
+		static get [dcl.declaredClass] () { return 'dcl/bases/Replacer'; }
+		constructor (x) {
+			super(x);
+			var props = dcl.collectPropertyDescriptors(x);
+			Object.keys(props).forEach(name => {
 				if (name in this) {
 					Object.defineProperty(this, name, props[name]);
 				}
-			}, this);
+			});
 		}
 	});
 });
