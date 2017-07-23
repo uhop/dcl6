@@ -2,7 +2,7 @@
 (['../dcl', './Destroyable'], function (dcl, Destroyable) {
 	'use strict';
 
-	return dcl(Destroyable, Base => class extends Base {
+	return dcl(null, Destroyable, Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/mixins/Cleanup'; }
 		constructor () {
 			super();
