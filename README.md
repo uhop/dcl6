@@ -14,7 +14,7 @@ The rest is TBD.
 
 # License
 
-BSD or AFL &mdash; your choice.
+The 3-clause BSD license.
 
 [npm-image]:      https://img.shields.io/npm/v/dcl6.svg
 [npm-url]:        https://npmjs.org/package/dcl6
