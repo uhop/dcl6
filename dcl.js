@@ -6,15 +6,12 @@
 	const cname = 'constructor', pname = 'prototype';
 
 	const findCommonBase = bases => {
-		if (!bases.length) {
-			return Object; // null?
-		}
 		let commonBase = bases[0];
 		for (let i = 1; i < bases.length; ++i) {
 			const base = bases[i];
-			if (commonBase === base || base[pname].isPrototypeOf(commonBase[pname])) {
+			if (commonBase === base || Object[pname].isPrototypeOf.call(commonBase[pname], base[pname])) {
 				// do nothing
-			} else if (commonBase[pname].isPrototypeOf(base[pname])) {
+			} else if (Object[pname].isPrototypeOf.call(base[pname], commonBase[pname])) {
 				commonBase = base;
 			} else {
 				dcl._error('incompatible bases');
@@ -105,29 +102,8 @@
 		}
 	};
 
-	const collectAroundAdvice = (target, source, path, proto, name) => {
-		if (!target.hasOwnProperty(path)) {
-			const fn = getPath(source, path);
-			if (fn) {
-				if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
-				target[path] = fn;
-			} else {
-				if (Object[pname].hasOwnProperty.call(proto, name)) {
-					const prop = Object.getOwnPropertyDescriptor(proto, name);
-					if (prop.get || prop.set) { // accessor
-						if (path.charAt(3) === '.') {
-							target[path] = null;
-						}
-					} else { // data
-						target[path] = null;
-					}
-				}
-			}
-		}
-	};
-
 	const decorateAroundAdvices = ctr => {
-		const ownDirectives = Object[pname].hasOwnProperty.call(ctr, dcl.directives) && ctr[dcl.directives] ||
+		const ownDirectives = ctr.hasOwnProperty(dcl.directives) && ctr[dcl.directives] ||
 			Object[pname].hasOwnProperty.call(ctr[pname], dcl.directives) && ctr[pname][dcl.directives];
 		ownDirectives && Object.keys(ownDirectives).forEach(name => {
 			const advice = ownDirectives[name];
@@ -180,22 +156,11 @@
 	const getPropertyDescriptor = (o, name) => {
 		let prop;
 		iterateOverPrototypes(o, proto => {
-			if (Object[pname].hasOwnProperty.call(proto, name)) {
-				prop = Object.getOwnPropertyDescriptor(proto, name);
-				return true;
-			}
+			prop = Object.getOwnPropertyDescriptor(proto, name);
+			if (prop) { return true; }
 		});
 		return prop;
 	};
-
-	function recordProp(props, o, recorded) {
-		return function (name) {
-			if (recorded[name] !== 1) {
-				recorded[name] = 1;
-				props[name] = Object.getOwnPropertyDescriptor(o, name);
-			}
-		};
-	}
 
 	const collectPropertyDescriptors = o => {
 		const props = {};
@@ -214,16 +179,6 @@
 	}
 
 	const nop = () => {};
-
-	const copyOwnDescriptors = (target, source) => {
-		const copyOwnDescriptor = key => {
-			if (!Object[pname].hasOwnProperty.call(target, key)) {
-				Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
-			}
-		};
-		Object.getOwnPropertyNames(source).forEach(copyOwnDescriptor);
-		Object.getOwnPropertySymbols(source).forEach(copyOwnDescriptor);
-	};
 
 	const collectValues = (source, key) => {
 		const values = [];
@@ -362,7 +317,7 @@
 	};
 
 	const makeCtrStub = (fn, advice) => {
-		dcl._checkAdviceForCtr();
+		dcl._checkCtrAdvices();
 		return new Proxy(fn, {construct: function (target, args) {
 			let i, fns = advice.before, result, thrown = false;
 			// run main advices
@@ -388,12 +343,6 @@
 			}
 			return result;
 		}});
-	};
-
-	const updateValue = (o, name, value) => {
-		const prop = getPropertyDescriptor(o, name);
-		prop.value = value;
-		Object.defineProperty(o, name, prop);
 	};
 
 	function dcl(base, ...mixins) {
@@ -448,17 +397,17 @@
 			const advice = typeof ownDirectives[name] == 'string' ? {chainWith: ownDirectives[name]} : ownDirectives[name];
 			if (typeof advice.chainWith == 'string') {
 				if (name === cname) { dcl._error('no chaining rule for constructors: always "after"'); }
-				if (!directives.hasOwnProperty(name)) { directives[name] = advice.chainWith; }
+				if (!Object[pname].hasOwnProperty.call(directives, name)) { directives[name] = advice.chainWith; }
 				else if (directives[name] !== advice.chainWith) { dcl._error('conflicting chaining directives'); }
 			}
-			if (!advices.hasOwnProperty(name)) { advices[name] = {}; }
+			if (!Object[pname].hasOwnProperty.call(advices, name)) { advices[name] = {}; }
 			const target = advices[name];
 			['get.before', 'get.after', 'set.before', 'set.after', 'before', 'after'].
 				forEach(path => collectSideAdvice(target, advice, path));
 		};
 
 		collectValues(ctr[pname], cname).reverse().forEach(mixin => {
-			const ownDirectives = Object[pname].hasOwnProperty.call(mixin, dcl.directives) && mixin[dcl.directives] ||
+			const ownDirectives = mixin.hasOwnProperty(dcl.directives) && mixin[dcl.directives] ||
 				Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
 			if (ownDirectives) {
 				const collect = collectDirectives(ownDirectives, mixin[pname]);
@@ -480,13 +429,11 @@
 			advice.before && advice.before.reverse();
 
 			// process descriptor
-			let newProp, prop = Object.getOwnPropertyDescriptor(ctr[pname], name);
-			if (!prop) {
-				prop = getPropertyDescriptor(ctr[pname], name);
-			}
+			let newProp, prop = getPropertyDescriptor(ctr[pname], name);
 			if (prop) {
+				const hasDirective = Object[pname].hasOwnProperty.call(directives, name);
 				if (prop.get || prop.set) { // accessor descriptor
-					if (directives.hasOwnProperty(name)) { dcl._error('chaining cannot be applied to accessors'); }
+					if (hasDirective) { dcl._error('chaining cannot be applied to accessors'); }
 					newProp = {
 						get: makeGetStub(prop.get, advice),
 						set: makeSetStub(prop.set, advice),
@@ -497,7 +444,7 @@
 				} else { // data descriptor
 					let value = prop.value;
 					if (typeof value !== 'function') { dcl._error('wrong value'); }
-					if (directives.hasOwnProperty(name)) {
+					if (hasDirective) {
 						const weaver = dcl.weavers[directives[name]];
 						if (!weaver) { dcl._error('there is no weaver: ' + directives[name]); }
 						value = weaver(collectValues(ctr[pname], name));
@@ -536,17 +483,20 @@
 		// finalize a constructor
 		ctr[dcl.meta] = {original, originalRemove, reverted, mixins, base, ctr};
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
-			ctr[pname].hasOwnProperty(dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
+			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
 		if (name && name !== 'Object') {
-			updateValue(ctr, 'name', name);
+			const prop = getPropertyDescriptor(ctr, 'name');
+			prop.value = name;
+			Object.defineProperty(ctr, 'name', prop);
+
 		}
 		if (Object[pname].hasOwnProperty.call(advices, cname)) {
 			const prop = Object.getOwnPropertyDescriptor(ctr[pname], cname);
 			original[cname] = prop;
 			const advice = advices[cname];
 			advice.before && advice.before.reverse();
-			ctr = makeCtrStub(ctr, advice); // copyOwnDescriptors(stub, ctr);
+			ctr = makeCtrStub(ctr, advice);
 			reverted[cname] = {
 				value:        ctr,
 				configurable: true,
@@ -557,6 +507,23 @@
 		Object.defineProperties(ctr[pname], reverted);
 		return dcl._makeCtr(ctr);
 	}
+
+	const isSubset = (ctr, subset) => {
+		if (subset === ctr) { return true; }
+		const m1 = ctr[dcl.meta], m2 = subset[dcl.meta];
+		if (m1) {
+			if (m2) {
+				if (m2.mixins.length > m1.mixins.length || m2.base !== m1.base && !Object[pname].isPrototypeOf.call(m2.base[pname], m1.base[pname])) { return false; }
+				let i = 0, j = 0;
+				for (; i < m2.mixins.length && j < m1.mixins.length; ++j) {
+					if (m2.mixins[i] === m1.mixins[j]) { ++i; }
+				}
+				return i >= m2.mixins.length;
+			}
+			return subset === m1.base || Object[pname].isPrototypeOf.call(subset[pname], m1.base[pname]);
+		}
+		return !m2 && Object[pname].isPrototypeOf.call(subset[pname], ctr[pname]);
+	};
 
 	// symbols
 	dcl.declaredClass = Symbol('name');
@@ -574,11 +541,13 @@
 	dcl.iterateOverPrototypes = iterateOverPrototypes;
 	dcl.getPropertyDescriptor = getPropertyDescriptor;
 	dcl.collectPropertyDescriptors = collectPropertyDescriptors;
+	dcl.isSubset = isSubset;
+	dcl.hasMixin = (ctr, mixin) => ctr[dcl.meta] && ctr[dcl.meta].mixins.some(m => m === mixin);
 
 	// internals
 	dcl._error = text => { throw new Error(text); };
 	dcl._makeCtr = ctr => ctr;
-	dcl._checkAdviceForCtr = () => {};
+	dcl._checkCtrAdvices = () => {};
 
 	return dcl;
 });
