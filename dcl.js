@@ -116,7 +116,7 @@
 				}
 			} else {
 				if (Object[pname].hasOwnProperty.call(proto, name)) {
-					const prop = Object.getOwnPropertyDescriptor(name);
+					const prop = Object.getOwnPropertyDescriptor(proto, name);
 					if (prop.get || prop.set) { // accessor
 						if (path.charAt(3) === '.') {
 							target[path] = null;
