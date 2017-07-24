@@ -411,94 +411,94 @@
 
 			eval(t.TEST('a.m(5) === 6'));
 			eval(t.TEST('b.m(5) === 11'));
-		// },
-		// {
-		// 	test: function test_get_super_side_advices (t) {
-		// 		const A = dcl(null, Base => class extends Base {
-		// 				static get [dcl.directives] () {
-		// 					return {
-		// 						m: {
-		// 							before: function (x) {
-		// 								t.info('A.m:before - ' + x);
-		// 							},
-		// 							after: function (_, x) {
-		// 								t.info('A.m:after - ' + x);
-		// 							},
-		// 							around: function (sup) {
-		// 								return function (x) {
-		// 									t.info('A.m:around - ' + x);
-		// 									return x + 1;
-		// 								};
-		// 							}
-		// 						}
-		// 					};
-		// 				}
-		// 			}),
-		// 			B = dcl(A, Base => class extends Base {
-		// 				get m () { return super.m; }
-		// 				static get [dcl.directives] () {
-		// 					return {
-		// 						m: {
-		// 							get: {
-		// 								before: function (x) {
-		// 									t.info('B.m:before');
-		// 								},
-		// 								after: function (_, x) {
-		// 									t.info('B.m:after');
-		// 								},
-		// 								around: function (sup) {
-		// 									return function () {
-		// 										t.info('B.m:around');
-		// 										return function (x) {
-		// 											return sup.call(this).call(this, x + 1);
-		// 										};
-		// 									};
-		// 								}
-		// 							}
-		// 						}
-		// 					};
-		// 				}
-		// 			}),
-		// 			C = dcl(B, Base => class extends Base {
-		// 				m (x) { return super.m(x); }
-		// 				static get [dcl.directives] () {
-		// 					return {
-		// 						m: {
-		// 							before: function (x) {
-		// 								t.info('C.m:before - ' + x);
-		// 							},
-		// 							after: function (_, x) {
-		// 								t.info('C.m:after - ' + x);
-		// 							},
-		// 							around: function (sup) {
-		// 								return function (x) {
-		// 									t.info('C.m:around - ' + x);
-		// 									return sup.call(this, x + 1);
-		// 								};
-		// 							}
-		// 						}
-		// 					};
-		// 				}
-		// 			});
-		//
-		// 		const a = new A(), b = new B(), c = new C();
-		//
-		// 		t.info('A');
-		// 		t.info('Result: ' + a.m(5));
-		//
-		// 		t.info('B');
-		// 		t.info('Result: ' + b.m(5));
-		//
-		// 		t.info('C');
-		// 		t.info('Result: ' + c.m(5));
-		// 	},
-		// 	logs: [
-		// 		'A', 'A.m:before - 5', 'A.m:around - 5', 'A.m:after - 6', 'Result: 6',
-		// 		'B', 'B.m:before', 'B.m:around', 'B.m:after', 'A.m:around - 6', 'Result: 7',
-		// 		'C', 'C.m:before - 5', 'B.m:before', 'A.m:before - 5',
-		// 			'C.m:around - 5', 'B.m:around', 'A.m:around - 7',
-		// 			'A.m:after - 8', 'B.m:after', 'C.m:after - 8', 'Result: 8'
-		// 	]
+		},
+		{
+			test: function test_get_super_side_advices (t) {
+				const A = dcl(null, Base => class extends Base {
+						static get [dcl.directives] () {
+							return {
+								m: {
+									before: function (x) {
+										t.info('A.m:before - ' + x);
+									},
+									after: function (_, x) {
+										t.info('A.m:after - ' + x);
+									},
+									around: function (sup) {
+										return function (x) {
+											t.info('A.m:around - ' + x);
+											return x + 1;
+										};
+									}
+								}
+							};
+						}
+					}),
+					B = dcl(A, Base => class extends Base {
+						get m () { return super.m; }
+						static get [dcl.directives] () {
+							return {
+								m: {
+									get: {
+										before: function (x) {
+											t.info('B.m:before');
+										},
+										after: function (_, x) {
+											t.info('B.m:after');
+										},
+										around: function (sup) {
+											return function () {
+												t.info('B.m:around');
+												return function (x) {
+													return sup.call(this).call(this, x + 1);
+												};
+											};
+										}
+									}
+								}
+							};
+						}
+					}),
+					C = dcl(B, Base => class extends Base {
+						m (x) { return super.m(x); }
+						static get [dcl.directives] () {
+							return {
+								m: {
+									before: function (x) {
+										t.info('C.m:before - ' + x);
+									},
+									after: function (_, x) {
+										t.info('C.m:after - ' + x);
+									},
+									around: function (sup) {
+										return function (x) {
+											t.info('C.m:around - ' + x);
+											return sup.call(this, x + 1);
+										};
+									}
+								}
+							};
+						}
+					});
+
+				const a = new A(), b = new B(), c = new C();
+
+				t.info('A');
+				t.info('Result: ' + a.m(5));
+
+				t.info('B');
+				t.info('Result: ' + b.m(5));
+
+				t.info('C');
+				t.info('Result: ' + c.m(5));
+			},
+			logs: [
+				'A', 'A.m:before - 5', 'A.m:around - 5', 'A.m:after - 6', 'Result: 6',
+				'B', 'B.m:before', 'B.m:around', 'B.m:after', 'A.m:around - 6', 'Result: 7',
+				'C', 'B.m:before', 'C.m:before - 5', 'A.m:before - 5',
+					'C.m:around - 5', 'B.m:around', 'A.m:around - 7',
+					'B.m:after', 'A.m:after - 8', 'C.m:after - 8', 'Result: 8'
+			]
 		}
 	]);
 
