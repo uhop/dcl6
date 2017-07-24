@@ -12,8 +12,8 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "heya-unit": ">=0.1",
-    "heya-globalize": "^1.0.3"
+    "heya-unit": "^0.3.0",
+    "heya-globalize": "^1.2.1"
   },
   "scripts": {
     "test": "node tests/tests.js",
