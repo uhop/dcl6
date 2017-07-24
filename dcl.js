@@ -471,7 +471,7 @@
 		// finalize a constructor
 		const layerCtr = class extends ctr {};
 		Object.defineProperties(layerCtr[pname], layer);
-		ctr[dcl.meta] = {base, mixins, ctr, layer, layerCtr};
+		ctr[dcl.meta] = {base, mixins, ctr, layerCtr};
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
 			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
