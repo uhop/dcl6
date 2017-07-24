@@ -65,12 +65,12 @@
 
 	const dereferable = {object: 1, function: 1};
 
-	const getPath = (obj, path) => {
+	const getPath = (obj, path, delimiter='.') => {
 		if (typeof path == 'string') {
-			path = path.split('.');
+			path = path.split(delimiter);
 		}
 		for (let i = 0; i < path.length; ++i) {
-			if (!obj || dereferable[typeof obj] !== 1) return; // undefined
+			if (!obj || !dereferable[typeof obj]) return; // undefined
 			obj = obj[path[i]];
 		}
 		return obj;
