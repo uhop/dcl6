@@ -132,8 +132,8 @@
 						};
 					} else { // accessor descriptor
 						prop = {
-							get: advice.get && advice.get.around ? advice.get.around.call(advice, null) : null,
-							set: advice.set && advice.set.around ? advice.set.around.call(advice, null) : null,
+							get: advice.get && advice.get.around && advice.get.around.call(advice, null) || undefined,
+							set: advice.set && advice.set.around && advice.set.around.call(advice, null) || undefined,
 							configurable: true
 						};
 					}
@@ -381,13 +381,11 @@
 		let commonBase = base = findCommonBase(bases), commonMixins = mixins = c3mro(mixes);
 
 		// see, if we can use our base directly
-		if (meta) {
-			if (meta.base === commonBase && meta.mixins.length <= commonMixins.length) {
-				const last = meta.mixins.length - 1;
-				if (last >= 0 && meta.mixins[last] === commonMixins[last]) {
-					commonBase = originalBase;
-					commonMixins = commonMixins.slice(last + 1);
-				}
+		if (meta && meta.base === commonBase && meta.mixins.length <= commonMixins.length) {
+			const last = meta.mixins.length - 1;
+			if (last >= 0 && meta.mixins[last] === commonMixins[last]) {
+				commonBase = originalBase;
+				commonMixins = commonMixins.slice(last + 1);
 			}
 		}
 
