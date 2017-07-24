@@ -56,27 +56,6 @@
 			eval(t.TEST('x.b === "DCB"'));
 			eval(t.TEST('x.c === "BCD"'));
 		},
-		// function test_isInstanceOf (t) {
-		// 	var A = dcl(null, {});
-		// 	var B = dcl(null, {});
-		// 	var C = dcl(null, {});
-		// 	var D = dcl(null, {});
-		//
-		// 	var AC = dcl([A, C], {});
-		// 	var BD = dcl([B, D], {});
-		//
-		// 	var x = new AC, y = new BD;
-		//
-		// 	eval(t.TEST('dcl.isInstanceOf(x, A)'));
-		// 	eval(t.TEST('!dcl.isInstanceOf(x, B)'));
-		// 	eval(t.TEST('dcl.isInstanceOf(x, C)'));
-		// 	eval(t.TEST('!dcl.isInstanceOf(x, D)'));
-		//
-		// 	eval(t.TEST('!dcl.isInstanceOf(y, A)'));
-		// 	eval(t.TEST('dcl.isInstanceOf(y, B)'));
-		// 	eval(t.TEST('!dcl.isInstanceOf(y, C)'));
-		// 	eval(t.TEST('dcl.isInstanceOf(y, D)'));
-		// },
 		function test_postscript (t) {
 			const A = dcl(null, Base => class extends Base {
 				constructor () {
@@ -306,6 +285,72 @@
 			const y = new (dcl(B, A));
 			y.m1();
 			eval(t.TEST('y.a === "AbBbBaAa"'));
+		},
+		function test_meta (t) {
+			const A = Base => class extends Base { a () { return 1; } }
+			const B = Base => class extends Base { b () { return 2; } }
+			const C = Base => class extends Base { c () { return 3; } }
+			const D = Base => class extends Base { d () { return 4; } }
+
+			const ABC = dcl(null, A, B, C);
+			eval(t.TEST('dcl.hasMixin(ABC, A)'));
+			eval(t.TEST('dcl.hasMixin(ABC, B)'));
+			eval(t.TEST('dcl.hasMixin(ABC, C)'));
+			eval(t.TEST('!dcl.hasMixin(ABC, D)'));
+
+			const AB = dcl(null, A, B);
+			eval(t.TEST('dcl.hasMixin(AB, A)'));
+			eval(t.TEST('dcl.hasMixin(AB, B)'));
+			eval(t.TEST('!dcl.hasMixin(AB, C)'));
+			eval(t.TEST('!dcl.hasMixin(AB, D)'));
+
+			const AC = dcl(null, A, C);
+			eval(t.TEST('dcl.hasMixin(AC, A)'));
+			eval(t.TEST('!dcl.hasMixin(AC, B)'));
+			eval(t.TEST('dcl.hasMixin(AC, C)'));
+			eval(t.TEST('!dcl.hasMixin(AC, D)'));
+
+			const BC = dcl(null, B, C);
+			eval(t.TEST('!dcl.hasMixin(BC, A)'));
+			eval(t.TEST('dcl.hasMixin(BC, B)'));
+			eval(t.TEST('dcl.hasMixin(BC, C)'));
+			eval(t.TEST('!dcl.hasMixin(BC, D)'));
+
+			const CD = dcl(null, C, D);
+			eval(t.TEST('!dcl.hasMixin(CD, A)'));
+			eval(t.TEST('!dcl.hasMixin(CD, B)'));
+			eval(t.TEST('dcl.hasMixin(CD, C)'));
+			eval(t.TEST('dcl.hasMixin(CD, D)'));
+
+			eval(t.TEST('dcl.isSubset(ABC, ABC)'));
+			eval(t.TEST('dcl.isSubset(ABC, AB)'));
+			eval(t.TEST('dcl.isSubset(ABC, AC)'));
+			eval(t.TEST('dcl.isSubset(ABC, BC)'));
+			eval(t.TEST('!dcl.isSubset(ABC, CD)'));
+
+			eval(t.TEST('!dcl.isSubset(CD, ABC)'));
+			eval(t.TEST('!dcl.isSubset(CD, AB)'));
+			eval(t.TEST('!dcl.isSubset(CD, AC)'));
+			eval(t.TEST('!dcl.isSubset(CD, BC)'));
+
+			const X = function () {};
+
+			const XABC = dcl(X, A, B, C);
+			eval(t.TEST('dcl.hasMixin(XABC, A)'));
+			eval(t.TEST('dcl.hasMixin(XABC, B)'));
+			eval(t.TEST('dcl.hasMixin(XABC, C)'));
+			eval(t.TEST('!dcl.hasMixin(XABC, D)'));
+
+			eval(t.TEST('dcl.isSubset(XABC, ABC)'));
+			eval(t.TEST('dcl.isSubset(XABC, AB)'));
+			eval(t.TEST('dcl.isSubset(XABC, AC)'));
+			eval(t.TEST('dcl.isSubset(XABC, BC)'));
+			eval(t.TEST('!dcl.isSubset(XABC, CD)'));
+
+			const XA = dcl(X, A);
+			eval(t.TEST('dcl.isSubset(XABC, XA)'));
+			eval(t.TEST('!dcl.isSubset(ABC, XA)'));
+			eval(t.TEST('!dcl.isSubset(XA, ABC)'));
 		}
 	]);
 
