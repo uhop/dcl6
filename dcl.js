@@ -204,24 +204,12 @@
 		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get.')) { return fn; }
 		fn = fn || (() => {});
 		const stub = function () {
-			let i, fns = advice['get.before'], result = fn, thrown = false;
-			// run getter advices
+			let i, fns = advice['get.before'], result, thrown = false;
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].call(this);
 				}
 			}
-			fns = advice['get.after'];
-			if (fns) {
-				const args = [];
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, args, result);
-				}
-			}
-			if (thrown) {
-				throw result;
-			}
-			// run main advices
 			fns = advice.before;
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
@@ -229,10 +217,17 @@
 				}
 			}
 			try {
-				result = result.apply(this, arguments);
+				result = fn.apply(this, arguments);
 			} catch (e) {
 				result = e;
 				thrown = true;
+			}
+			fns = advice['get.after'];
+			if (fns) {
+				const args = [];
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].call(this, args, fn);
+				}
 			}
 			fns = advice.after;
 			if (fns) {
