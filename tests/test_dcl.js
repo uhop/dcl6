@@ -351,6 +351,13 @@
 			eval(t.TEST('dcl.isSubset(XABC, XA)'));
 			eval(t.TEST('!dcl.isSubset(ABC, XA)'));
 			eval(t.TEST('!dcl.isSubset(XA, ABC)'));
+
+			const XAB = dcl(XA, B);
+			const xab = new XAB;
+			eval(t.TEST('xab instanceof XAB'));
+			eval(t.TEST('xab instanceof XA'));
+			eval(t.TEST('xab instanceof X'));
+			eval(t.TEST('xab instanceof Object'));
 		}
 	]);
 
