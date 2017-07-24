@@ -63,17 +63,6 @@
 		return output.reverse();
 	}
 
-	const updateDecorations = (base, action) => {
-		const meta = base[dcl.meta];
-		if (meta) {
-			const remove = meta[action + 'Remove'];
-			remove && remove.forEach(name => delete base[pname][name])
-			meta[action] && Object.defineProperties(base[pname], meta[action]);
-			return meta.ctr;
-		}
-		return base;
-	};
-
 	const dereferable = {object: 1, function: 1};
 
 	const getPath = (obj, path) => {
@@ -205,6 +194,8 @@
 		fn = fn || (() => {});
 		const stub = function () {
 			let i, fns = advice['get.before'], result, thrown = false;
+			const makeReturn = value => { result = value; thrown = false; }
+			const makeThrow  = value => { result = value; thrown = true; }
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].call(this);
@@ -232,7 +223,7 @@
 			fns = advice.after;
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result);
+					fns[i].call(this, arguments, result, makeReturn, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -250,7 +241,8 @@
 		getter = getter || (() => {});
 		const stub = function () {
 			let i, fns = advice['get.before'], result, thrown = false;
-			// run getter advices
+			const makeReturn = value => { result = value; thrown = false; }
+			const makeThrow  = value => { result = value; thrown = true; }
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].call(this);
@@ -266,7 +258,7 @@
 			if (fns) {
 				const args = [];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, args, result);
+					fns[i].call(this, args, result, makeReturn, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -284,6 +276,7 @@
 		setter = setter || (() => {});
 		const stub = function (value) {
 			let i, fns = advice['set.before'], result, thrown = false;
+			const makeThrow  = value => { result = value; thrown = true; }
 			// run setter advices
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
@@ -300,7 +293,7 @@
 			if (fns) {
 				const args = [value];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, args);
+					fns[i].call(this, args, undefined, null, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -312,26 +305,26 @@
 		return stub;
 	};
 
-	const makeCtrStub = (fn, advice) => {
+	const makeCtrStub = (ctr, layerCtr, advice) => {
+		if (!advice) {
+			return new Proxy(ctr, {construct: function (_, args) {
+				return new layerCtr(...args);
+			}});
+		}
 		dcl._checkCtrAdvices();
-		return new Proxy(fn, {construct: function (target, args) {
+		return new Proxy(ctr, {construct: function (target, args) {
 			let i, fns = advice.before, result, thrown = false;
-			// run main advices
+			const makeThrow  = value => { result = value; thrown = true; }
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].apply(null, args);
 				}
 			}
-			try {
-				result = new fn(...args);
-			} catch (e) {
-				result = e;
-				thrown = true;
-			}
+			result = new layerCtr(...args);
 			fns = advice.after;
 			if (fns) {
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(result, args, result);
+					fns[i].call(result, args, result, null, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -340,14 +333,6 @@
 			return result;
 		}});
 	};
-
-	function guardedRun (runner, finalizer) {
-		try {
-			runner();
-		} finally {
-			finalizer();
-		}
-	}
 
 	function dcl(base, ...mixins) {
 		// normalize parameters
@@ -385,7 +370,7 @@
 		}
 
 		// create a prototype and collect interrim constructors
-		let ctr = updateDecorations(commonBase, 'original');
+		let ctr = commonBase[dcl.meta] && commonBase[dcl.meta].ctr || commonBase;
 		commonMixins.forEach(mixin => {
 			ctr = mixin(ctr);
 			decorateAroundAdvices(ctr);
@@ -407,7 +392,7 @@
 		};
 
 		// prepare to apply advices
-		const original = {}, reverted = {}, originalRemove = [];
+		const layer = {};
 		const createDirectives = name => {
 			if (name === cname) { return; } // ignore constructors
 			const advice = advices[name];
@@ -465,59 +450,40 @@
 				}
 			}
 			if (newProp) {
-				if (prop && Object[pname].hasOwnProperty.call(ctr[pname], name)) {
-					original[name] = prop;
-				} else {
-					originalRemove.push(name);
-				}
-				reverted[name] = newProp;
+				layer[name] = newProp;
 			}
 		};
 
-		// apply directives & advices
-		guardedRun(() => {
-			// collect advices
-			collectValues(ctr[pname], cname).reverse().forEach(mixin => {
-				const ownDirectives = mixin.hasOwnProperty(dcl.directives) && mixin[dcl.directives] ||
-					Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
-				if (ownDirectives) {
-					const collect = collectDirectives(ownDirectives, mixin[pname]);
-					Object.getOwnPropertyNames(ownDirectives).forEach(collect);
-					Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
-				}
-			});
-			// apply advices
-			Object.getOwnPropertyNames(advices).forEach(createDirectives);
-			Object.getOwnPropertySymbols(advices).forEach(createDirectives);
-		}, () => {
-			updateDecorations(commonBase, 'reverted');
+		// collect advices
+		collectValues(ctr[pname], cname).reverse().forEach(mixin => {
+			const ownDirectives = mixin.hasOwnProperty(dcl.directives) && mixin[dcl.directives] ||
+				Object[pname].hasOwnProperty.call(mixin[pname], dcl.directives) && mixin[pname][dcl.directives];
+			if (ownDirectives) {
+				const collect = collectDirectives(ownDirectives, mixin[pname]);
+				Object.getOwnPropertyNames(ownDirectives).forEach(collect);
+				Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
+			}
 		});
+		// apply advices
+		Object.getOwnPropertyNames(advices).forEach(createDirectives);
+		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
 
 		// finalize a constructor
-		ctr[dcl.meta] = {original, originalRemove, reverted, mixins, base, ctr};
+		const layerCtr = class extends ctr {};
+		Object.defineProperties(layerCtr[pname], layer);
+		ctr[dcl.meta] = {base, mixins, ctr, layer, layerCtr};
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
 			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
 		if (name && name !== 'Object') {
-			const prop = getPropertyDescriptor(ctr, 'name');
-			prop.value = name;
-			Object.defineProperty(ctr, 'name', prop);
+			Object.defineProperty(ctr, 'name', {value: name, configurable: true});
+		}
 
-		}
-		if (Object[pname].hasOwnProperty.call(advices, cname)) {
-			const prop = Object.getOwnPropertyDescriptor(ctr[pname], cname);
-			original[cname] = prop;
-			const advice = advices[cname];
-			advice.before && advice.before.reverse();
-			ctr = makeCtrStub(ctr, advice);
-			reverted[cname] = {
-				value:        ctr,
-				configurable: true,
-				enumerable:   prop.enumerable,
-				writable:     prop.writable
-			};
-		}
-		Object.defineProperties(ctr[pname], reverted);
+		// impersonate a constructor
+		const advice = Object[pname].hasOwnProperty.call(advices, cname) && advices[cname];
+		advice && advice.before && advice.before.reverse();
+		ctr = makeCtrStub(ctr, layerCtr, advice);
+
 		return dcl._makeCtr(ctr);
 	}
 
