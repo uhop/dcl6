@@ -11,11 +11,11 @@ function (module, unit, dcl, Mixer, Replacer) {
 
 			const A = dcl(Mixer, Base => class extends Base {
 				static get [dcl.declaredClass] () { return 'A'; }
+				get a () { return 1; }
+				get b () { return 'two'; }
+				get c () { return null; }
+				get d () { return f; }
 			});
-			A.prototype.a = 1;
-			A.prototype.b = 'two';
-			A.prototype.c = null;
-			A.prototype.d = f;
 
 			const x = new A({
 				a: 5,
@@ -34,11 +34,11 @@ function (module, unit, dcl, Mixer, Replacer) {
 
 			const A = dcl(Replacer, Base => class extends Base {
 				static get [dcl.declaredClass] () { return 'A'; }
+				get a () { return 1; }
+				get b () { return 'two'; }
+				get c () { return null; }
+				get d () { return f; }
 			});
-			A.prototype.a = 1;
-			A.prototype.b = 'two';
-			A.prototype.c = null;
-			A.prototype.d = f;
 
 			const x = new A({
 				a: 5,
@@ -53,11 +53,13 @@ function (module, unit, dcl, Mixer, Replacer) {
 			eval(t.TEST('!("f" in x)'));
 		},
 		function test_Replacer_with_mixins (t) {
-			const A = dcl(Replacer);
-			A.prototype.a = 0;
+			const A = dcl(Replacer, Base => class extends Base {
+				get a () { return 0; }
+			});
 
-			const B = dcl(Replacer);
-			B.prototype.b = 0;
+			const B = dcl(Replacer, Base => class extends Base {
+				get b () { return 0; }
+			});
 
 			const C = dcl(Replacer, A, B);
 

@@ -4,14 +4,16 @@
 
 	return dcl(null, Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/bases/Replacer'; }
-		constructor (x) {
-			super(x);
-			var props = dcl.collectPropertyDescriptors(x);
-			Object.keys(props).forEach(name => {
-				if (name in this) {
-					Object.defineProperty(this, name, props[name]);
-				}
-			});
+		constructor (...args) {
+			super(...args);
+			if (typeof args[0] == 'object' || typeof args[0] == 'function') {
+				const props = dcl.collectPropertyDescriptors(args[0]);
+				Object.keys(props).forEach(name => {
+					if (name in this) {
+						Object.defineProperty(this, name, props[name]);
+					}
+				});
+			}
 		}
 	});
 });

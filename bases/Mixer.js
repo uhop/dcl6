@@ -4,9 +4,11 @@
 
 	return dcl(null, Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/bases/Mixer'; }
-		constructor (x) {
-			super(x);
-			Object.defineProperties(this, dcl.collectPropertyDescriptors(x));
+		constructor (...args) {
+			super(...args);
+			if (typeof args[0] == 'object' || typeof args[0] == 'function') {
+				Object.defineProperties(this, dcl.collectPropertyDescriptors(args[0]));
+			}
 		}
 	});
 });
