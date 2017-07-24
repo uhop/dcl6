@@ -2,7 +2,7 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	return dcl(null, Base => class extends Base {
+	return Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/bases/Mixer'; }
 		constructor (...args) {
 			super(...args);
@@ -10,5 +10,5 @@
 				Object.defineProperties(this, dcl.collectPropertyDescriptors(args[0]));
 			}
 		}
-	});
+	};
 });

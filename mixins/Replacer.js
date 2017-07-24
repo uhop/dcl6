@@ -2,7 +2,7 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	return dcl(null, Base => class extends Base {
+	return Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/bases/Replacer'; }
 		constructor (...args) {
 			super(...args);
@@ -15,5 +15,5 @@
 				});
 			}
 		}
-	});
+	};
 });

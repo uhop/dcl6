@@ -4,8 +4,8 @@
 
 	return dcl(null, Destroyable, Base => class extends Base {
 		static get [dcl.declaredClass] () { return 'dcl/mixins/Cleanup'; }
-		constructor () {
-			super();
+		constructor (...args) {
+			super(...args);
 			this.__cleanupStack = [];
 		}
 		pushCleanup (resource, cleanup) {

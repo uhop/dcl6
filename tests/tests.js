@@ -5,10 +5,9 @@
 	'./test_dcl',
 	// './test_advise',
 	'./test_raw',
-	'./test_bases',
-	'./test_mixins'
+	'./test_mixins',
 	// './test_advices',
-	// './test_accessors',
+	'./test_accessors'
 	// './test_advise_accessors',
 	// './test_debug',
 	// './test_registry'

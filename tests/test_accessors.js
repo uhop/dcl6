@@ -5,116 +5,34 @@
 	// tests
 
 	unit.add(module, [
-		function test_defaults (t) {
-			var A = dcl({
-					life: 42,
-					answer: function () { return this.life; }
-				});
-
-			var a = new A();
-
-			eval(t.TEST('a.life === 42'));
-			eval(t.TEST('a.answer() === 42'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(A.prototype, "life").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(A.prototype, "answer").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(A.prototype, "constructor").writable'));
-
-			var B = dcl({
-					life: 42,
-					answer: function () { return this.life; }
-				}, {
-					writable: false
-				});
-
-			var b = new B();
-
-			eval(t.TEST('b.life === 42'));
-			eval(t.TEST('b.answer() === 42'));
-			eval(t.TEST('!Object.getOwnPropertyDescriptor(B.prototype, "life").writable'));
-			eval(t.TEST('!Object.getOwnPropertyDescriptor(B.prototype, "answer").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(B.prototype, "constructor").writable'));
-
-			var C = dcl({
-					life: {
-						value: 42,
-						writable: false,
-						configurable: true,
-						enumerable: true
-					},
-					answer: function () { return this.life; }
-				}, {
-					detectProps: true
-				});
-
-			var c = new C();
-
-			eval(t.TEST('c.life === 42'));
-			eval(t.TEST('c.answer() === 42'));
-			eval(t.TEST('!Object.getOwnPropertyDescriptor(C.prototype, "life").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(C.prototype, "answer").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(C.prototype, "constructor").writable'));
-
-			var D = dcl({
-					life: 42,
-					answer: function () { return this.life; }
-				}, {
-					writable: function (descriptor, name) {
-						if (name === 'life') {
-							descriptor.writable = false;
-						}
-					}
-				});
-
-			var d = new D();
-
-			eval(t.TEST('d.life === 42'));
-			eval(t.TEST('d.answer() === 42'));
-			eval(t.TEST('!Object.getOwnPropertyDescriptor(D.prototype, "life").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(D.prototype, "answer").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(D.prototype, "constructor").writable'));
-
-			var E = dcl(dcl.prop({
-					life: {
-						value: 42,
-						writable: false,
-						configurable: true,
-						enumerable: true
-					},
-					answer: {
-						value: function () { return this.life; },
-						writable: true
-					}
-				}));
-
-			var e = new E();
-
-			eval(t.TEST('e.life === 42'));
-			eval(t.TEST('e.answer() === 42'));
-			eval(t.TEST('!Object.getOwnPropertyDescriptor(E.prototype, "life").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(E.prototype, "answer").writable'));
-			eval(t.TEST('Object.getOwnPropertyDescriptor(E.prototype, "constructor").writable'));
-		},
 		function test_get_super (t) {
-			var A = dcl({
-					constructor: function () {
+			const A = dcl(null, Base => class extends Base {
+					constructor () {
+						super();
 						this.__value = 0;
-					},
+					}
 					get value () { return this.__value; }
 				}),
-				B = dcl(A, {
-					value: dcl.prop({
-						get: dcl.superCall(function (sup) {
-							return function () {
-								return sup.call(this) + 1;
-							};
-						})
-					})
+				B = dcl(A, Base => class extends Base {
+					static get [dcl.directives] () {
+						return {
+							value: {
+								get: {
+									around: function (sup) {
+										return function () {
+											return sup.call(this) + 1;
+										};
+									}
+								}
+							}
+						};
+					}
 				}),
-				C = dcl(B, {
+				C = dcl(B, Base => class extends Base {
 					get value () { return 42; }
 				});
 
-			var a = new A(), b = new B(), c = new C();
+			const a = new A(), b = new B(), c = new C();
 
 			eval(t.TEST('a.value === 0'));
 			eval(t.TEST('b.value === 1'));
@@ -127,26 +45,33 @@
 			eval(t.TEST('c.value === 42'));
 		},
 		function test_set_super (t) {
-			var A = dcl({
-					constructor: function () {
+			const A = dcl(null, Base => class extends Base {
+					constructor () {
+						super();
 						this.__value = 0;
-					},
+					}
 					set value (x) { this.__value = x; }
 				}),
-				B = dcl(A, {
-					value: dcl.prop({
-						set: dcl.superCall(function (sup) {
-							return function (x) {
-								sup.call(this, x + 1);
-							};
-						})
-					})
+				B = dcl(A, Base => class extends Base {
+					static get [dcl.directives] () {
+						return {
+							value: {
+								set: {
+									around: function (sup) {
+										return function (x) {
+											sup.call(this, x + 1);
+										};
+									}
+								}
+							}
+						};
+					}
 				}),
-				C = dcl(B, {
+				C = dcl(B, Base => class extends Base {
 					set value (x) { this.__value = 42; }
 				});
 
-			var a = new A(), b = new B(), c = new C();
+			const a = new A(), b = new B(), c = new C();
 
 			a.value = 5;
 			eval(t.TEST('a.__value === 5'));
@@ -158,33 +83,42 @@
 			eval(t.TEST('c.__value === 42'));
 		},
 		function test_get_set_super (t) {
-			var A = dcl({
-					constructor: function () {
+			const A = dcl(null, Base => class extends Base {
+					constructor () {
+						super();
 						this.__value = 0;
-					},
-					get value ()  { return this.__value; },
+					}
+					get value ()  { return this.__value; }
 					set value (x) { this.__value = x; }
 				}),
-				B = dcl(A, {
-					value: dcl.prop({
-						get: dcl.superCall(function (sup) {
-							return function () {
-								return sup.call(this) + 1;
-							};
-						}),
-						set: dcl.superCall(function (sup) {
-							return function (x) {
-								sup.call(this, x + 1);
-							};
-						})
-					})
+				B = dcl(A, Base => class extends Base {
+					static get [dcl.directives] () {
+						return {
+							value: {
+								get: {
+									around: function (sup) {
+										return function () {
+											return sup.call(this) + 1;
+										};
+									}
+								},
+								set: {
+									around: function (sup) {
+										return function (x) {
+											sup.call(this, x + 1);
+										};
+									}
+								}
+							}
+						};
+					}
 				}),
-				C = dcl(B, {
-					get value () { return 42; },
+				C = dcl(B, Base => class extends Base {
+					get value ()  { return 42; }
 					set value (x) { this.__value = 42; }
 				});
 
-			var a = new A(), b = new B(), c = new C();
+			const a = new A(), b = new B(), c = new C();
 
 			eval(t.TEST('a.value === 0 && a.__value === 0'));
 			a.value = 5;
@@ -200,36 +134,45 @@
 		},
 		{
 			test: function test_get_side_advices (t) {
-				var A = dcl({
-						constructor: function () {
+				const A = dcl(null, Base => class extends Base {
+						constructor () {
+							super();
 							this.__value = 0;
-						},
-						value: dcl.prop({
-							get: dcl.advise({
-								before: function () { t.info('Ab'); },
-								around: function (sup) {
-									return function () { return this.__value; };
-								},
-								after:  function () { t.info('Aa'); }
-							})
-						})
+						}
+						static get [dcl.directives] () {
+							return {
+								value: {
+									get: {
+										before: function () { t.info('Ab'); },
+										around: function (sup) {
+											return function () { return this.__value; };
+										},
+										after:  function () { t.info('Aa'); }
+									}
+								}
+							};
+						}
 					}),
-					B = dcl(A, {
-						value: dcl.prop({
-							get: dcl.advise({
-								before: function () { t.info('Bb'); },
-								around: function (sup) {
-									return function () { return sup.call(this) + 1; };
-								},
-								after:  function () { t.info('Ba'); }
-							})
-						})
+					B = dcl(A, Base => class extends Base {
+						static get [dcl.directives] () {
+							return {
+								value: {
+									get: {
+										before: function () { t.info('Bb'); },
+										around: function (sup) {
+											return function () { return sup.call(this) + 1; };
+										},
+										after:  function () { t.info('Ba'); }
+									}
+								}
+							};
+						}
 					}),
-					C = dcl(B, {
+					C = dcl(B, Base => class extends Base {
 						get value () { return 42; }
 					});
 
-				var a = new A(), b = new B(), c = new C();
+				const a = new A(), b = new B(), c = new C();
 
 				t.info('read a');
 				t.info(a.value + '');
@@ -246,36 +189,45 @@
 		},
 		{
 			test: function test_set_side_advices (t) {
-				var A = dcl({
-						constructor: function () {
+				const A = dcl(null, Base => class extends Base {
+						constructor () {
+							super();
 							this.__value = 0;
-						},
-						value: dcl.prop({
-							set: dcl.advise({
-								before: function () { t.info('Ab'); },
-								around: function (sup) {
-									return function (x) { this.__value = x; };
-								},
-								after:  function () { t.info('Aa'); }
-							})
-						})
+						}
+						static get [dcl.directives] () {
+							return {
+								value: {
+									set: {
+										before: function () { t.info('Ab'); },
+										around: function (sup) {
+											return function (x) { this.__value = x; };
+										},
+										after:  function () { t.info('Aa'); }
+									}
+								}
+							};
+						}
 					}),
-					B = dcl(A, {
-						value: dcl.prop({
-							set: dcl.advise({
-								before: function () { t.info('Bb'); },
-								around: function (sup) {
-									return function (x) { sup.call(this, x + 1); };
-								},
-								after:  function () { t.info('Ba'); }
-							})
-						})
+					B = dcl(A, Base => class extends Base {
+						static get [dcl.directives] () {
+							return {
+								value: {
+									set: {
+										before: function () { t.info('Bb'); },
+										around: function (sup) {
+											return function (x) { sup.call(this, x + 1); };
+										},
+										after:  function () { t.info('Ba'); }
+									}
+								}
+							};
+						}
 					}),
-					C = dcl(B, {
+					C = dcl(B, Base => class extends Base {
 						set value (x) { this.__value = 42; }
 					});
 
-				var a = new A(), b = new B(), c = new C();
+				const a = new A(), b = new B(), c = new C();
 
 				t.info('write a');
 				a.value = 5;
@@ -295,51 +247,60 @@
 		},
 		{
 			test: function test_get_set_side_advices (t) {
-				var A = dcl({
-						constructor: function () {
+				const A = dcl(null, Base => class extends Base {
+						constructor () {
+							super();
 							this.__value = 0;
-						},
-						value: dcl.prop({
-							get: dcl.advise({
-								before: function () { t.info('Abg'); },
-								around: function (sup) {
-									return function () { return this.__value; };
-								},
-								after:  function () { t.info('Aag'); }
-							}),
-							set: dcl.advise({
-								before: function () { t.info('Ab'); },
-								around: function (sup) {
-									return function (x) { this.__value = x; };
-								},
-								after:  function () { t.info('Aa'); }
-							})
-						})
+						}
+						static get [dcl.directives] () {
+							return {
+								value: {
+									get: {
+										before: function () { t.info('Abg'); },
+										around: function (sup) {
+											return function () { return this.__value; };
+										},
+										after:  function () { t.info('Aag'); }
+									},
+									set: {
+										before: function () { t.info('Ab'); },
+										around: function (sup) {
+											return function (x) { this.__value = x; };
+										},
+										after:  function () { t.info('Aa'); }
+									}
+								}
+							};
+						}
 					}),
-					B = dcl(A, {
-						value: dcl.prop({
-							get: dcl.advise({
-								before: function () { t.info('Bbg'); },
-								around: function (sup) {
-									return function () { return sup.call(this) + 1; };
-								},
-								after:  function () { t.info('Bag'); }
-							}),
-							set: dcl.advise({
-								before: function () { t.info('Bb'); },
-								around: function (sup) {
-									return function (x) { sup.call(this, x + 1); };
-								},
-								after:  function () { t.info('Ba'); }
-							})
-						})
+					B = dcl(A, Base => class extends Base {
+						static get [dcl.directives] () {
+							return {
+								value: {
+									get: {
+										before: function () { t.info('Bbg'); },
+										around: function (sup) {
+											return function () { return sup.call(this) + 1; };
+										},
+										after:  function () { t.info('Bag'); }
+									},
+									set: {
+										before: function () { t.info('Bb'); },
+										around: function (sup) {
+											return function (x) { sup.call(this, x + 1); };
+										},
+										after:  function () { t.info('Ba'); }
+									}
+								}
+							};
+						}
 					}),
-					C = dcl(B, {
-						get value () { return 42; },
+					C = dcl(B, Base => class extends Base {
+						get value () { return 42; }
 						set value (x) { this.__value = 42; }
 					});
 
-				var a = new A(), b = new B(), c = new C();
+				const a = new A(), b = new B(), c = new C();
 
 				t.info('read a');
 				t.info(a.value + '');
@@ -375,31 +336,38 @@
 			]
 		},
 		function test_get_in_super_chain (t) {
-			var A = dcl({
-					m: dcl.prop({
-						get: function () {
-							return this.up ? this.m3 : this.m2;
-						}
-					}),
-					m2: function (x) {
+			const A = dcl(null, Base => class extends Base {
+					get m () {
+						return this.up ? this.m3 : this.m2;
+					}
+					m2 (x) {
 						return 2 * x;
-					},
-					m3: function (x) {
+					}
+					m3 (x) {
 						return 3 * x;
 					}
 				}),
-				B = dcl(A, {
-					m: dcl.superCall(function (sup) {
-						return function (x) {
-							if (sup) {
-								return sup.call(this, x + 1);
+				B = dcl(A, Base => class extends Base {
+					m (x) {
+						return super.m(x);
+					}
+					static get [dcl.directives] () {
+						return {
+							m: {
+								around: function (sup) {
+									return function (x) {
+										if (sup) {
+											return sup.call(this, x + 1);
+										}
+										return 0;
+									};
+								}
 							}
-							return 0;
 						};
-					})
+					}
 				});
 
-			var a = new A(), b = new B();
+			const a = new A(), b = new B();
 
 			eval(t.TEST('a.m(5) === 10'));
 			a.up = true;
@@ -410,106 +378,127 @@
 			eval(t.TEST('b.m(5) === 18'));
 		},
 		function test_super_in_get_chain (t) {
-			var A = dcl({
-					m: function (x) {
+			const A = dcl(null, Base => class extends Base {
+					m (x) {
 						return x + 1;
 					}
 				}),
-				B = dcl(A, {
-					m: dcl.prop({
-						get: dcl.superCall(function (sup) {
-							return function () {
-								if (sup) {
-									return function (x) {
-										return sup.call(this).call(this, 2 * x);
-									};
+				B = dcl(A, Base => class extends Base {
+					get m () { return super.m; }
+					static get [dcl.directives] () {
+						return {
+							m: {
+								get: {
+									around: function (sup) {
+										return function () {
+											if (sup) {
+												return function (x) {
+													return sup.call(this).call(this, 2 * x);
+												};
+											}
+											return function (x) {
+												return x + 2;
+											};
+										};
+									}
 								}
-								return function (x) {
-									return x + 2;
-								};
-							};
-						})
-					})
+							}
+						};
+					}
 				});
 
-			var a = new A(), b = new B();
+			const a = new A(), b = new B();
 
 			eval(t.TEST('a.m(5) === 6'));
 			eval(t.TEST('b.m(5) === 11'));
-		},
-		{
-			test: function test_get_super_side_advices (t) {
-				var A = dcl({
-						m: dcl.advise({
-							before: function (x) {
-								t.info('A.m:before - ' + x);
-							},
-							after: function (_, x) {
-								t.info('A.m:after - ' + x);
-							},
-							around: function (sup) {
-								return function (x) {
-									t.info('A.m:around - ' + x);
-									return x + 1;
-								};
-							}
-						})
-					}),
-					B = dcl(A, {
-						m: dcl.prop({
-							get: dcl.advise({
-								before: function (x) {
-									t.info('B.m:before');
-								},
-								after: function (_, x) {
-									t.info('B.m:after');
-								},
-								around: function (sup) {
-									return function () {
-										t.info('B.m:around');
-										return function (x) {
-											return sup.call(this).call(this, x + 1);
-										};
-									};
-								}
-							})
-						})
-					}),
-					C = dcl(B, {
-						m: dcl.advise({
-							before: function (x) {
-								t.info('C.m:before - ' + x);
-							},
-							after: function (_, x) {
-								t.info('C.m:after - ' + x);
-							},
-							around: function (sup) {
-								return function (x) {
-									t.info('C.m:around - ' + x);
-									return sup.call(this, x + 1);
-								};
-							}
-						})
-					});
-
-				var a = new A(), b = new B(), c = new C();
-
-				t.info('A');
-				t.info('Result: ' + a.m(5));
-
-				t.info('B');
-				t.info('Result: ' + b.m(5));
-
-				t.info('C');
-				t.info('Result: ' + c.m(5));
-			},
-			logs: [
-				'A', 'A.m:before - 5', 'A.m:around - 5', 'A.m:after - 6', 'Result: 6',
-				'B', 'B.m:before', 'B.m:around', 'B.m:after', 'A.m:around - 6', 'Result: 7',
-				'C', 'C.m:before - 5', 'B.m:before', 'A.m:before - 5',
-					'C.m:around - 5', 'B.m:around', 'A.m:around - 7',
-					'A.m:after - 8', 'B.m:after', 'C.m:after - 8', 'Result: 8'
-			]
+		// },
+		// {
+		// 	test: function test_get_super_side_advices (t) {
+		// 		const A = dcl(null, Base => class extends Base {
+		// 				static get [dcl.directives] () {
+		// 					return {
+		// 						m: {
+		// 							before: function (x) {
+		// 								t.info('A.m:before - ' + x);
+		// 							},
+		// 							after: function (_, x) {
+		// 								t.info('A.m:after - ' + x);
+		// 							},
+		// 							around: function (sup) {
+		// 								return function (x) {
+		// 									t.info('A.m:around - ' + x);
+		// 									return x + 1;
+		// 								};
+		// 							}
+		// 						}
+		// 					};
+		// 				}
+		// 			}),
+		// 			B = dcl(A, Base => class extends Base {
+		// 				get m () { return super.m; }
+		// 				static get [dcl.directives] () {
+		// 					return {
+		// 						m: {
+		// 							get: {
+		// 								before: function (x) {
+		// 									t.info('B.m:before');
+		// 								},
+		// 								after: function (_, x) {
+		// 									t.info('B.m:after');
+		// 								},
+		// 								around: function (sup) {
+		// 									return function () {
+		// 										t.info('B.m:around');
+		// 										return function (x) {
+		// 											return sup.call(this).call(this, x + 1);
+		// 										};
+		// 									};
+		// 								}
+		// 							}
+		// 						}
+		// 					};
+		// 				}
+		// 			}),
+		// 			C = dcl(B, Base => class extends Base {
+		// 				m (x) { return super.m(x); }
+		// 				static get [dcl.directives] () {
+		// 					return {
+		// 						m: {
+		// 							before: function (x) {
+		// 								t.info('C.m:before - ' + x);
+		// 							},
+		// 							after: function (_, x) {
+		// 								t.info('C.m:after - ' + x);
+		// 							},
+		// 							around: function (sup) {
+		// 								return function (x) {
+		// 									t.info('C.m:around - ' + x);
+		// 									return sup.call(this, x + 1);
+		// 								};
+		// 							}
+		// 						}
+		// 					};
+		// 				}
+		// 			});
+		//
+		// 		const a = new A(), b = new B(), c = new C();
+		//
+		// 		t.info('A');
+		// 		t.info('Result: ' + a.m(5));
+		//
+		// 		t.info('B');
+		// 		t.info('Result: ' + b.m(5));
+		//
+		// 		t.info('C');
+		// 		t.info('Result: ' + c.m(5));
+		// 	},
+		// 	logs: [
+		// 		'A', 'A.m:before - 5', 'A.m:around - 5', 'A.m:after - 6', 'Result: 6',
+		// 		'B', 'B.m:before', 'B.m:around', 'B.m:after', 'A.m:around - 6', 'Result: 7',
+		// 		'C', 'C.m:before - 5', 'B.m:before', 'A.m:before - 5',
+		// 			'C.m:around - 5', 'B.m:around', 'A.m:around - 7',
+		// 			'A.m:after - 8', 'B.m:after', 'C.m:after - 8', 'Result: 8'
+		// 	]
 		}
 	]);
 
