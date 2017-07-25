@@ -213,17 +213,17 @@
 				result = e;
 				thrown = true;
 			}
+			fns = advice.after;
+			if (fns) {
+				for (i = 0; i < fns.length; ++i) {
+					fns[i].call(this, arguments, result, makeReturn, makeThrow);
+				}
+			}
 			fns = advice.get_after;
 			if (fns) {
 				const args = [];
 				for (i = 0; i < fns.length; ++i) {
 					fns[i].call(this, args, fn);
-				}
-			}
-			fns = advice.after;
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, arguments, result, makeReturn, makeThrow);
 				}
 			}
 			if (thrown) {

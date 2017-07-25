@@ -497,7 +497,7 @@
 				'B', 'B.m:before', 'B.m:around', 'B.m:after', 'A.m:around - 6', 'Result: 7',
 				'C', 'B.m:before', 'C.m:before - 5', 'A.m:before - 5',
 					'C.m:around - 5', 'B.m:around', 'A.m:around - 7',
-					'B.m:after', 'A.m:after - 8', 'C.m:after - 8', 'Result: 8'
+					'A.m:after - 8', 'C.m:after - 8', 'B.m:after', 'Result: 8'
 			]
 		}
 	]);
