@@ -256,9 +256,8 @@
 			}
 			fns = advice.get_after;
 			if (fns) {
-				const args = [];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, args, result, makeReturn, makeThrow);
+					fns[i].call(this, arguments, result, makeReturn, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -291,9 +290,8 @@
 			}
 			fns = advice.set_after;
 			if (fns) {
-				const args = [value];
 				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(this, args, undefined, null, makeThrow);
+					fns[i].call(this, arguments, undefined, null, makeThrow);
 				}
 			}
 			if (thrown) {
@@ -504,10 +502,10 @@
 	};
 
 	// symbols
-	dcl.declaredClass = Symbol('name');
-	dcl.directives = Symbol('directives');
-	dcl.meta = Symbol('meta');
-	dcl.advice = Symbol('advice');
+	dcl.declaredClass = Symbol('dcl.name');
+	dcl.directives = Symbol('dcl.directives');
+	dcl.meta = Symbol('dcl.meta');
+	dcl.advice = Symbol('dcl.advice');
 
 	// weavers
 	dcl.weavers = {
