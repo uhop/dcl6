@@ -65,7 +65,7 @@
 
 	const dereferable = {object: 1, function: 1};
 
-	const getPath = (obj, path, delimiter='.') => {
+	const getPath = (obj, path, delimiter='_') => {
 		if (typeof path == 'string') {
 			path = path.split(delimiter);
 		}
@@ -190,10 +190,10 @@
 	const hasSideAdvices = (advice, prefix='') => hasSideAdvice(advice, prefix, 'before') || hasSideAdvice(advice, prefix, 'after');
 
 	const makeValueStub = (fn, advice) => {
-		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get.')) { return fn; }
+		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get_')) { return fn; }
 		fn = fn || (() => {});
 		const stub = function () {
-			let i, fns = advice['get.before'], result, thrown = false;
+			let i, fns = advice.get_before, result, thrown = false;
 			const makeReturn = value => { result = value; thrown = false; }
 			const makeThrow  = value => { result = value; thrown = true; }
 			if (fns) {
@@ -213,7 +213,7 @@
 				result = e;
 				thrown = true;
 			}
-			fns = advice['get.after'];
+			fns = advice.get_after;
 			if (fns) {
 				const args = [];
 				for (i = 0; i < fns.length; ++i) {
@@ -237,10 +237,10 @@
 	};
 
 	const makeGetStub = (getter, advice) => {
-		if (!hasSideAdvices(advice, 'get.')) { return getter; }
+		if (!hasSideAdvices(advice, 'get_')) { return getter; }
 		getter = getter || (() => {});
 		const stub = function () {
-			let i, fns = advice['get.before'], result, thrown = false;
+			let i, fns = advice.get_before, result, thrown = false;
 			const makeReturn = value => { result = value; thrown = false; }
 			const makeThrow  = value => { result = value; thrown = true; }
 			if (fns) {
@@ -254,7 +254,7 @@
 				result = e;
 				thrown = true;
 			}
-			fns = advice['get.after'];
+			fns = advice.get_after;
 			if (fns) {
 				const args = [];
 				for (i = 0; i < fns.length; ++i) {
@@ -272,10 +272,10 @@
 	};
 
 	const makeSetStub = (setter, advice) => {
-		if (!hasSideAdvices(advice, 'set.')) { return setter; }
+		if (!hasSideAdvices(advice, 'set_')) { return setter; }
 		setter = setter || (() => {});
 		const stub = function (value) {
-			let i, fns = advice['set.before'], result, thrown = false;
+			let i, fns = advice.set_before, result, thrown = false;
 			const makeThrow  = value => { result = value; thrown = true; }
 			// run setter advices
 			if (fns) {
@@ -289,7 +289,7 @@
 				result = e;
 				thrown = true;
 			}
-			fns = advice['set.after'];
+			fns = advice.set_after;
 			if (fns) {
 				const args = [value];
 				for (i = 0; i < fns.length; ++i) {
@@ -387,7 +387,7 @@
 			}
 			if (!Object[pname].hasOwnProperty.call(advices, name)) { advices[name] = {}; }
 			const target = advices[name];
-			['get.before', 'get.after', 'set.before', 'set.after', 'before', 'after'].
+			['get_before', 'get_after', 'set_before', 'set_after', 'before', 'after'].
 				forEach(path => collectSideAdvice(target, advice, path));
 		};
 
@@ -398,8 +398,8 @@
 			const advice = advices[name];
 
 			// normalize advice chains
-			advice['get.before'] && advice['get.before'].reverse();
-			advice['set.before'] && advice['set.before'].reverse();
+			advice.get_before && advice.get_before.reverse();
+			advice.set_before && advice.set_before.reverse();
 			advice.before && advice.before.reverse();
 
 			// process descriptor
