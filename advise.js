@@ -1,100 +1,139 @@
 /* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
-([], function () {
+(['./dcl'], function (dcl) {
 	'use strict';
 
 	var pname = 'prototype';
 
-	function Node (parent) {
-		this.parent = parent || this;
-	}
-
-	Node[pname] = {
-		removeTopic: function (topic) {
-			var n = 'next_' + topic, p = 'prev_' + topic;
+	class Node {
+		constructor (parent) {
+			super();
+			this.parent = parent || this;
+		}
+		removeTopic (topic) {
+			const n = 'next_' + topic, p = 'prev_' + topic;
 			if (this[n] && this[p]) {
 				this[n][p] = this[p];
 				this[p][n] = this[n];
 			}
-		},
-		remove: function () {
-			this.removeTopic('before');
-			this.removeTopic('around');
+		}
+		remove () {
+			dcl._sideAdvices.forEach(name => this.removeTopic(name));
 
 			// remove & recreate around advices
-			var parent = this.parent, next = this.next_around;
+			const parent = this.parent;
+			let   next = this.next_around;
 			this.removeTopic('after');
 			for (; next && next !== parent; next = next.next_around) {
 				next.around = next.originalAround(next.prev_around.around);
 			}
-		},
-		addTopic: function (node, topic) {
-			var n = 'next_' + topic, p = 'prev_' + topic,
-				prev = node[p] = this[p] || this;
+		}
+		addTopic (node, topic) {
+			const n = 'next_' + topic, p = 'prev_' + topic, prev = node[p] = this[p] || this;
 			node[n] = this;
 			prev[n] = this[p] = node;
-		},
-		addAdvice: function (advice, instance, name, type) {
-			var node = new Node(this);
-			if (advice.before) {
-				node.before = advice.before;
-				this.addTopic(node, 'before');
-			}
-			if (advice.around) {
-				if (typeof advice.around != 'function') {
-					advise._error('wrong super call', instance, name, type);
+		}
+	}
+	Node[pname].destroy = Node[pname].unadvise = Node[pname].remove;
+
+	const convertAdvices = fn => {
+		const root = new Node(), meta = fn[dcl.meta] || {};
+		for (let i = 0, done = true;; ++i) {
+			const node = new Node(root);
+			if (!i) {
+				node.around = fn;
+				root.addTopic(node, 'around');
+			};
+			dcl._sideAdvices.forEach(name => {
+				if (meta[name] && i < meta[name].length) {
+					node[name] = meta[name][i];
+					root.addTopic(node, name);
+					done = false;
 				}
-				node.originalAround = advice.around;
-				this.addTopic(node, 'around');
-				if (node.prev_around.around && typeof node.prev_around.around != 'function') {
-					advise._error('wrong super arg', instance, name, type);
-				}
-				node.around = advice.around(node.prev_around.around || null);
-				if (typeof node.around != 'function') {
-					advise._error('wrong super result', instance, name, type);
-				}
-			}
-			if (advice.after) {
-				node.after = advice.after;
-				this.addTopic(node, 'after');
-			}
-			return node;
+			});
+			if (done) { break; }
+		}
+		return root;
+	}
+
+	const addAroundAdvice = (root, node, advice, around) => {
+		if (typeof around != 'function') {
+			dcl._error('wrong super call');
+		}
+		node.originalAround = around;
+		root.addTopic(node, 'around');
+		if (node.prev_around.around && typeof node.prev_around.around != 'function') {
+			dcl._error('wrong super arg');
+		}
+		node.around = around.call(advice, node.prev_around.around || null);
+		if (typeof node.around != 'function') {
+			dcl._error('wrong super result');
 		}
 	};
 
-	Node[pname].destroy = Node[pname].unadvise = Node[pname].remove;
-
-	function addNode (root, topic) {
-		return function (f) {
-			var node = new Node(root);
-			node[topic] = f;
-			root.addTopic(node, topic);
-		};
-	}
-
-	function makeStub (value) {
-		var root = new Node();
-		if (value) {
-			if (typeof value.advices == 'object') {
-				var advices = value.advices;
-				advices.before.forEach(addNode(root, 'before'));
-				advices.after. forEach(addNode(root, 'after'));
-				advices.around && addNode(root, 'around')(advices.around);
-			} else {
-				addNode(root, 'around')(value);
+	const addAdvice = (root, advice) => {
+		const node = new Node(root);
+		if (advice.get) {
+			if (advice.get.before) {
+				node.get_before = advice.get.before;
+				root.addTopic(node, 'get_before');
+			}
+			if (advice.get.after) {
+				node.get_after = advice.get.after;
+				root.addTopic(node, 'get_after');
+			}
+			if (advice.get.around) {
+				addAroundAdvice(root, node, advice, advice.get.around);
 			}
 		}
-		function stub () {
-			var result, thrown, p;
+		if (advice.set) {
+			if (advice.set.before) {
+				node.set_before = advice.set.before;
+				root.addTopic(node, 'set_before');
+			}
+			if (advice.set.after) {
+				node.set_after = advice.set.after;
+				root.addTopic(node, 'set_after');
+			}
+			if (advice.set.around) {
+				addAroundAdvice(root, node, advice, advice.set.around);
+			}
+		}
+		if (advice.before) {
+			node.before = advice.before;
+			root.addTopic(node, 'before');
+		}
+		if (advice.after) {
+			node.after = advice.after;
+			root.addTopic(node, 'after');
+		}
+		if (advice.around) {
+			addAroundAdvice(root, node, advice, advice.around);
+		}
+		return node;
+	};
+
+	const makeValueStub = value => {
+		// TODO: verify that value is a function
+		if (typeof value != 'function') { dcl._error(); }
+		const root = convertAdvices(value);
+		const stub = function () {
+			let result, thrown, p;
+			const makeReturn = value => { result = value; thrown = false; }
+			const makeThrow  = value => { result = value; thrown = true; }
 			// running the before chain
+			for (p = root.prev_get_before; p && p !== root; p = p.prev_get_before) {
+				p.get_before.call(this);
+			}
 			for (p = root.prev_before; p && p !== root; p = p.prev_before) {
 				p.before.apply(this, arguments);
 			}
 			// running the around chain
-			if (root.prev_around && root.prev_around !== root) {
+			const fn = root.prev_around && root.prev_around !== root && root.prev_around.around || null;
+			if (fn) {
 				try {
-					result = root.prev_around.around.apply(this, arguments);
-				} catch (error) {
-					result = error;
+					result = fn.apply(this, arguments);
+				} catch (e) {
+					result = e;
 					thrown = true;
 				}
 			}
@@ -102,106 +141,152 @@
 			for (p = root.next_after; p && p !== root; p = p.next_after) {
 				p.after.call(this, arguments, result, makeReturn, makeThrow);
 			}
+			const args = [];
+			for (p = root.next_get_after; p && p !== root; p = p.next_get_after) {
+				p.get_after.call(this, args, fn);
+			}
 			if (thrown) {
 				throw result;
 			}
 			return result;
-
-			function makeReturn (value) { result = value; thrown = false; }
-			function makeThrow  (value) { result = value; thrown = true; }
 		};
-		stub.node = root;
+		stub[advise.meta] = root;
 		return stub;
-	}
+	};
 
-	function convert (value, advice, instance, name, type) {
-		if (!value || !(value.node instanceof Node)) {
-			value = makeStub(value);
-			value.node.instance = instance;
-			value.node.name = name;
-			value.node.type = type;
-		}
-		var node = value.node.addAdvice(advice, instance, name, type);
-		return {value: value, handle: node};
-	}
+	const makeGetStub = getter => {
+		const root = convertAdvices(getter);
+		const stub = function () {
+			let result, thrown, p;
+			const makeReturn = value => { result = value; thrown = false; }
+			const makeThrow  = value => { result = value; thrown = true; }
+			// running the before chain
+			for (p = root.prev_get_before; p && p !== root; p = p.prev_get_before) {
+				p.get_before.call(this);
+			}
+			// running the around chain
+			if (root.prev_around && root.prev_around !== root) {
+				try {
+					result = root.prev_around.around.call(this);
+				} catch (e) {
+					result = e;
+					thrown = true;
+				}
+			}
+			// running the after chain
+			for (p = root.next_get_after; p && p !== root; p = p.next_get_after) {
+				p.get_after.call(this, arguments, result, makeReturn, makeThrow);
+			}
+			if (thrown) {
+				throw result;
+			}
+			return result;
+		};
+		stub[advise.meta] = root;
+		return stub;
+	};
 
-	function combineHandles (handles) {
-		var handle = {
-			remove: function () {
-				handles.forEach(function (handle) { handle.remove(); });
+	const makeSetStub = setter => {
+		const root = convertAdvices(setter);
+		const stub = function (value) {
+			let result, thrown, p;
+			const makeThrow  = value => { result = value; thrown = true; }
+			// running the before chain
+			for (p = root.prev_set_before; p && p !== root; p = p.prev_set_before) {
+				p.set_before.call(this, value);
+			}
+			// running the around chain
+			if (root.prev_around && root.prev_around !== root) {
+				try {
+					root.prev_around.around.call(this, value);
+				} catch (e) {
+					result = e;
+					thrown = true;
+				}
+			}
+			// running the after chain
+			for (p = root.next_set_after; p && p !== root; p = p.next_set_after) {
+				p.set_after.call(this, arguments, undefined, null, makeThrow);
+			}
+			if (thrown) {
+				throw result;
+			}
+		};
+		stub[advise.meta] = root;
+		return stub;
+	};
+
+	const convertProp = prop => {
+		const newProp = {...prop}, replace;
+		if (prop.get || prop.set) { // accessor descriptor
+			if (prop.get && !prop.get[advise.meta]) {
+				newProp.get = makeGetStub(prop.get);
+				replace = replace || newProp.get != prop.get;
+			}
+			if (prop.set && !prop.set[advise.meta]) {
+				newProp.set = makeSetStub(prop.set);
+				replace = replace || newProp.set != prop.set;
+			}
+		} else { // data descriptor
+			if (prop.value && !prop.value[advise.meta]) {
+				newProp.value = makeValueStub(prop.value);
+				replace = replace || newProp.value != prop.value;
 			}
 		}
-		handle.unadvise = handle.remove;
+		return replace && newProp;
+	};
+
+	const convertProperty = (instance, name, isAccessor) => {
+		let prop = dcl.getPropertyDescriptor(instance, name);
+		if (!prop) {
+			if (isAccessor) {
+				prop = {get: () => {}, set: () => {}, configurable: true};
+			} else {
+				prop = {value: () => {}, writable: true, configurable: true};
+			}
+		}
+		const newProp = convertProp(prop);
+		if (!newProp) { return null; }
+		const remove = Object[pname].hasOwnProperty(instance, name);
+		Object.defineProperty(instance, name, newProp);
+		const handle = {};
+		handle.destroy = handle.unadvise = handle.remove = () => {
+			remove ? delete instance[name] : Object.defineProperty(instance, name, prop);
+		};
+		return handle;
+	};
+
+	const combineHandles = handles => {
+		if (handles.length == 1) { return handles[0]; }
+		const handle = {};
+		handle.destroy = handle.unadvise = handle.remove =
+			() => handles.forEach(handle => handle.remove());
 		return handle;
 	}
 
-	function advise (instance, name, advice) {
-		var prop = getPropertyDescriptor(instance, name), handles = [];
-		if (prop) {
-			if (prop.get || prop.set) {
-				var result;
-				if (prop.get && advice.get) {
-					result = convert(prop.get, advice.get, instance, name, 'get');
-					prop.get = result.value;
-					handles.push(result.handle);
-				}
-				if (prop.set && advice.set) {
-					result = convert(prop.set, advice.set, instance, name, 'set');
-					prop.set = result.value;
-					handles.push(result.handle);
-				}
-			} else {
-				if (prop.value && advice) {
-					result = convert(prop.value, advice, instance, name, 'value');
-					prop.value = result.value;
-					handles.push(result.handle);
-				}
-			}
+	const advise = (instance, name, advice) => {
+		let handles;
+		if (typeof name == 'object') {
+			handles = Object.keys(name).filter(key => typeof name[key] == 'object').
+				map(name => advise(instance, key, name[key]));
 		} else {
-			prop = {writable: true, configurable: true, enumerable: true};
-			if (advice.get || advice.set) {
-				if (advice.get) {
-					result = convert(null, advice.get, instance, name, 'get');
-					prop.get = result.value;
-					handles.push(result.handles);
-				}
-				if (advice.set) {
-					result = convert(null, advice.set, instance, name, 'set');
-					prop.set = result.value;
-					handles.push(result.handles);
-				}
-			} else {
-				result = convert(null, advice, instance, name, 'value');
-				prop.value = result.value;
-				handles.push(result.handles);
-			}
+			const handle = convertProperty(instance, name, !(advice.before || advice.around || advice.after)),
+				prop = Object.getOwnPropertyDescriptor(instance, name);
+			handles = ['get', 'set', 'value'].
+				map(name => prop[name] && addAdvice(prop[name][advise.meta], advice));
+			handles.push(handle);
 		}
-		Object.defineProperty(instance, name, prop);
-		return combineHandles(handles);
-	}
+		return combineHandles(handles.filter(handle => handle));
+	};
 
 	// export
 
-	// guts, do not use them!
-	advise._error = function (msg) {
-		throw new Error(msg);
-	};
+	advise.meta = Symbol('dcl.advise.meta');
 
-	advise.before = function (instance, name, f) { return advise(instance, name, {before: f}); };
-	advise.after  = function (instance, name, f) { return advise(instance, name, {after:  f}); };
-	advise.around = function (instance, name, f) { return advise(instance, name, {around: f}); };
+	advise.before = (instance, name, f) => advise(instance, name, {before: f});
+	advise.after  = (instance, name, f) => advise(instance, name, {after:  f});
+	advise.around = (instance, name, f) => advise(instance, name, {around: f});
 	advise.Node = Node;
 
 	return advise;
-
-	// copied from dcl.js so we can be independent
-	function getPropertyDescriptor (o, name) {
-		while (o && o !== Object[pname]) {
-			if (o.hasOwnProperty(name)) {
-				return Object.getOwnPropertyDescriptor(o, name);
-			}
-			o = Object.getPrototypeOf(o);
-		}
-		return; // undefined
-	}
 });
