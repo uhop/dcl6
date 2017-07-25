@@ -387,8 +387,7 @@
 			}
 			if (!Object[pname].hasOwnProperty.call(advices, name)) { advices[name] = {}; }
 			const target = advices[name];
-			['get_before', 'get_after', 'set_before', 'set_after', 'before', 'after'].
-				forEach(path => collectSideAdvice(target, advice, path));
+			dcl._sideAdvices.forEach(path => collectSideAdvice(target, advice, path));
 		};
 
 		// prepare to apply advices
@@ -527,6 +526,8 @@
 	dcl._error = text => { throw new Error(text); };
 	dcl._makeCtr = ctr => ctr;
 	dcl._checkCtrAdvices = () => {};
+
+	dcl._sideAdvices = ['get_before', 'get_after', 'set_before', 'set_after', 'before', 'after'];
 
 	return dcl;
 });
