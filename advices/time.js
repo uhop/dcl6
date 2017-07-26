@@ -2,17 +2,18 @@
 ([], function () {
 	'use strict';
 
-	var uniq = 0;
+	let uniq = 0;
 
-	return function (name) {
-		var inCall = 0, label = name || ('Timer #' + uniq++);
+	return name => {
+		let inCall = 0;
+		const label = name || ('Timer #' + uniq++);
 		return {
-			before: function () {
+			before: () => {
 				if (!(inCall++)) {
 					console.time(label);
 				}
 			},
-			after: function () {
+			after: () => {
 				if (!--inCall) {
 					console.timeEnd(label);
 				}
