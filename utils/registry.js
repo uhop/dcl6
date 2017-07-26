@@ -2,12 +2,13 @@
 (['../dcl', '../advise'], function (dcl, advise) {
 	'use strict';
 
-	var registry = {};
+	let registry = {};
 
 	// register all named classes automatically
-	advise.after(dcl, '_makeCtr', function (_, result) {
-		if (result && typeof result.prototype.declaredClass == 'string') {
-			registry[result.prototype.declaredClass] = result;
+	advise.after(dcl, '_makeCtr', (_, ctr) => {
+		const name = ctr && (ctr[dcl.declaredClass] || ctr.prototype[dcl.declaredClass]);
+		if (typeof name == 'string') {
+			registry[name] = ctr;
 		}
 	});
 

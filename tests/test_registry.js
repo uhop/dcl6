@@ -10,12 +10,12 @@ function (module, unit, dcl, registry) {
 			registry.clear();
 			eval(t.TEST('registry.keys().length === 0'));
 
-			var A = dcl({declaredClass: 'A'});
+			const A = dcl(null, Base => class extends Base {static get [dcl.declaredClass] () { return 'A'; }});
 			eval(t.TEST('registry.keys().length === 1'));
 			eval(t.TEST('registry.has("A")'));
 			eval(t.TEST('registry.get("A") === A'));
 
-			var B = dcl({declaredClass: 'B'});
+			const B = dcl(null, Base => class extends Base {static get [dcl.declaredClass] () { return 'B'; }});
 			eval(t.TEST('registry.keys().length === 2'));
 			eval(t.TEST('registry.has("A")'));
 			eval(t.TEST('registry.get("A") === A'));
@@ -27,7 +27,7 @@ function (module, unit, dcl, registry) {
 			eval(t.TEST('registry.has("B")'));
 			eval(t.TEST('registry.get("B") === B'));
 
-			var C = dcl({}); // unnamed class
+			const C = dcl(null); // unnamed class
 			eval(t.TEST('registry.keys().length === 1'));
 			eval(t.TEST('registry.has("B")'));
 			eval(t.TEST('registry.get("B") === B'));
