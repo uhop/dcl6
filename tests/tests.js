@@ -8,7 +8,7 @@
 	'./test_accessors',
 	'./test_advise',
 	'./test_advices',
-	// './test_advise_accessors',
+	'./test_advise_accessors',
 	'./test_registry'
 	// './test_debug'
 ],

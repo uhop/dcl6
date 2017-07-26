@@ -55,22 +55,7 @@
 		return root;
 	}
 
-	const addAroundAdvice = (root, node, advice, around) => {
-		if (typeof around != 'function') {
-			dcl._error('wrong super call');
-		}
-		node.originalAround = around;
-		root.addTopic(node, 'around');
-		if (typeof node.prev_around.around != 'function') {
-			dcl._error('wrong super arg');
-		}
-		node.around = around.call(advice, node.prev_around.around);
-		if (typeof node.around != 'function') {
-			dcl._error('wrong super result');
-		}
-	};
-
-	const addAdvice = (root, advice) => {
+	const addAdvice = (root, advice, around) => {
 		const node = new Node(root);
 		if (advice.get) {
 			if (advice.get.before) {
@@ -80,9 +65,6 @@
 			if (advice.get.after) {
 				node.get_after = advice.get.after;
 				root.addTopic(node, 'get_after');
-			}
-			if (advice.get.around) {
-				addAroundAdvice(root, node, advice, advice.get.around);
 			}
 		}
 		if (advice.set) {
@@ -94,9 +76,6 @@
 				node.set_after = advice.set.after;
 				root.addTopic(node, 'set_after');
 			}
-			if (advice.set.around) {
-				addAroundAdvice(root, node, advice, advice.set.around);
-			}
 		}
 		if (advice.before) {
 			node.before = advice.before;
@@ -106,8 +85,19 @@
 			node.after = advice.after;
 			root.addTopic(node, 'after');
 		}
-		if (advice.around) {
-			addAroundAdvice(root, node, advice, advice.around);
+		if (around) {
+			if (typeof around != 'function') {
+				dcl._error('wrong super call');
+			}
+			node.originalAround = around;
+			root.addTopic(node, 'around');
+			if (typeof node.prev_around.around != 'function') {
+				dcl._error('wrong super arg');
+			}
+			node.around = around.call(advice, node.prev_around.around);
+			if (typeof node.around != 'function') {
+				dcl._error('wrong super result');
+			}
 		}
 		return node;
 	};
@@ -165,9 +155,10 @@
 				p.get_before.call(this);
 			}
 			// running the around chain
-			if (root.prev_around && root.prev_around !== root) {
+			const fn = root.prev_around && root.prev_around !== root && root.prev_around.around || null;
+			if (fn) {
 				try {
-					result = root.prev_around.around.call(this);
+					result = fn.call(this);
 				} catch (e) {
 					result = e;
 					thrown = true;
@@ -196,9 +187,10 @@
 				p.set_before.call(this, value);
 			}
 			// running the around chain
-			if (root.prev_around && root.prev_around !== root) {
+			const fn = root.prev_around && root.prev_around !== root && root.prev_around.around || null;
+			if (fn) {
 				try {
-					root.prev_around.around.call(this, value);
+					fn.call(this, value);
 				} catch (e) {
 					result = e;
 					thrown = true;
@@ -249,9 +241,9 @@
 		}
 		const newProp = convertProp(prop);
 		if (newProp) {
-			const isAdded = Object[pname].hasOwnProperty(instance, name);
+			const isReplaced = Object[pname].hasOwnProperty(instance, name);
 			Object.defineProperty(instance, name, newProp);
-			const remove = isAdded ? (() => delete instance[name]) : (() => Object.defineProperty(instance, name, prop));
+			const remove = isReplaced ? (() => Object.defineProperty(instance, name, prop)) : (() => delete instance[name]);
 			newProp.get && (newProp.get.remove = remove);
 			newProp.set && (newProp.set.remove = remove);
 			newProp.value && (newProp.value.remove = remove);
@@ -275,7 +267,8 @@
 			convertProperty(instance, name, !(advice.before || advice.around || advice.after));
 			const prop = Object.getOwnPropertyDescriptor(instance, name);
 			handles = ['get', 'set', 'value'].
-				map(name => prop[name] && addAdvice(prop[name][advise.meta], advice));
+				map(name => prop[name] && addAdvice(prop[name][advise.meta], advice,
+					name !== 'value' ? advice[name] && advice[name].around : advice.around));
 		}
 		return combineHandles(handles.filter(handle => handle));
 	};
