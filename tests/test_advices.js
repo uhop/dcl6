@@ -98,14 +98,14 @@ function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 			// TODO: redirect console to ice
 
 			if(console.time && console.timeEnd){
-				var x = new Ackermann();
+				const x = new Ackermann();
 
 				advise(x, 'a', time('x.a'));
 
 				x.a(3, 3);
 				x.a(3, 3);
 
-				var y = new Ackermann();
+				const y = new Ackermann();
 
 				advise(y, 'm0', memoize.advice('m0'));
 				advise(y, 'n0', memoize.advice('n0'));
@@ -118,18 +118,18 @@ function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 				y.a(3, 3);
 				y.a(3, 3);
 			}
-		// },
-		// function test_trace(t){
-		// 	// TODO: redirect console to ice
-		//
-		// 	// our instance:
-		// 	var x = new Ackermann();
-		//
-		// 	advise(x, 'm0', trace('m0', true));
-		// 	advise(x, 'n0', trace('n0', true));
-		// 	advise(x, 'a',  trace('a',  true));
-		//
-		// 	x.a(1, 1);
+		},
+		function test_trace(t){
+			// TODO: redirect console to ice
+
+			// our instance:
+			const x = new Ackermann();
+
+			advise(x, 'm0', trace('m0', true));
+			advise(x, 'n0', trace('n0', true));
+			advise(x, 'a',  trace('a',  true));
+
+			x.a(1, 1);
 		}
 	]);
 
