@@ -5,8 +5,8 @@
 	'./test_dcl',
 	'./test_raw',
 	'./test_mixins',
-	'./test_accessors'
-	// './test_advise',
+	'./test_accessors',
+	'./test_advise'
 	// './test_advices',
 	// './test_advise_accessors',
 	// './test_debug',
