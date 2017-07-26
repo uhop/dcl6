@@ -2,28 +2,28 @@
 (['../dcl'], function (dcl) {
 	'use strict';
 
-	var Counter = new dcl({
-		declaredClass: 'dcl/advices/counter/Counter',
-		constructor: function () {
+	const Counter = new dcl(null, Base => class extends Base {
+		static get [dcl.declaredClass] () { return 'dcl/advices/counter/Counter'; }
+		constructor () {
+			super();
 			this.reset();
-		},
-		reset: function () {
+		}
+		reset () {
 			this.calls = this.errors = 0;
-		},
-		advice: function () {
-			var self = this;
+		}
+		advice () {
 			return {
-				before: function () {
-					++self.calls;
+				before: () => {
+					++this.calls;
 				},
-				after: function (args, result) {
+				after: (args, result) => {
 					if (result instanceof Error) {
-						++self.errors;
+						++this.errors;
 					}
 				}
 			};
 		}
 	});
 
-	return function(){ return new Counter; };
+	return () => new Counter;
 });

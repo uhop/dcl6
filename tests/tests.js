@@ -6,11 +6,11 @@
 	'./test_raw',
 	'./test_mixins',
 	'./test_accessors',
-	'./test_advise'
-	// './test_advices',
+	'./test_advise',
+	'./test_advices'
 	// './test_advise_accessors',
-	// './test_debug',
-	// './test_registry'
+	// './test_registry',
+	// './test_debug'
 ],
 function (unit) {
 	'use strict';

@@ -4,15 +4,15 @@
 function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 	'use strict';
 
-	var Ackermann = dcl(null, {
-		declaredName: 'Ackermann',
-		m0: function (n) {
+	const Ackermann = dcl(null, Base => class extends Base {
+		static get [dcl.declaredClass] () { return 'Ackermann'; }
+		m0 (n) {
 			return n + 1;
-		},
-		n0: function (m) {
+		}
+		n0 (m) {
 			return this.a(m - 1, 1);
-		},
-		a: function (m, n) {
+		}
+		a (m, n) {
 			if (m == 0) {
 				return this.m0(n);
 			}
@@ -27,15 +27,15 @@ function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 
 	unit.add(module, [
 		function test_counter(t){
-			var x = new Ackermann();
+			const x = new Ackermann();
 
-			var counterM0 = counter();
+			const counterM0 = counter();
 			advise(x, 'm0', counterM0.advice());
 
-			var counterN0 = counter();
+			const counterN0 = counter();
 			advise(x, 'n0', counterN0.advice());
 
-			var counterA = counter();
+			const counterA = counter();
 			advise(x, 'a', counterA.advice());
 
 			x.a(3, 2);
@@ -50,29 +50,39 @@ function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 		{
 			test: function test_flow(t){
 				// our advised version:
-				var AdvisedAckermann = dcl(Ackermann, {
-						declaredName: 'AdvisedAckermann',
-						m0: dcl.advise(flow.advice('m0')),
-						n0: dcl.advise(flow.advice('n0')),
-						a:  dcl.advise(flow.advice('a'))
+				const AdvisedAckermann = dcl(Ackermann, Base => class extends Base {
+						static get [dcl.declaredName] () { return 'AdvisedAckermann'; }
+						static get [dcl.directives] () {
+							return {
+								m0: flow.advice('m0'),
+								n0: flow.advice('n0'),
+								a:  flow.advice('a')
+							};
+						}
 					});
 
 				// our instrumented version:
-				var InstrumentedAckermann = dcl(AdvisedAckermann, {
-						declaredName: 'InstrumentedAckermann',
-						m0: dcl.around(function (sup) {
-							return function (n) {
-								t.info('a() called: ' + (flow.inFlowOf('a') || 0));
-								t.info('n0() called: ' + (flow.inFlowOf('n0') || 0));
-								var stack = flow.getStack();
-								var previous = stack[stack.length - 2] || '(none)';
-								t.info('m0() called from: ' + previous);
-								return sup.call(this, n);
-							}
-						})
+				const InstrumentedAckermann = dcl(AdvisedAckermann, Base => class extends Base {
+						static get [dcl.declaredClass] () { return 'InstrumentedAckermann'; }
+						static get [dcl.directives] () {
+							return {
+								m0: {
+									around: function (sup) {
+										return function (n) {
+											t.info('a() called: ' + (flow.inFlowOf('a') || 0));
+											t.info('n0() called: ' + (flow.inFlowOf('n0') || 0));
+											const stack = flow.getStack();
+											const previous = stack[stack.length - 2] || '(none)';
+											t.info('m0() called from: ' + previous);
+											return sup.call(this, n);
+										};
+									}
+								}
+							};
+						}
 					});
 
-				var x = new InstrumentedAckermann();
+				const x = new InstrumentedAckermann;
 				x.a(1, 1);
 			},
 			logs: [
@@ -108,18 +118,18 @@ function (module, unit, dcl, advise, counter, flow, time, memoize, trace) {
 				y.a(3, 3);
 				y.a(3, 3);
 			}
-		},
-		function test_trace(t){
-			// TODO: redirect console to ice
-
-			// our instance:
-			var x = new Ackermann();
-
-			advise(x, 'm0', trace('m0', true));
-			advise(x, 'n0', trace('n0', true));
-			advise(x, 'a',  trace('a',  true));
-
-			x.a(1, 1);
+		// },
+		// function test_trace(t){
+		// 	// TODO: redirect console to ice
+		//
+		// 	// our instance:
+		// 	var x = new Ackermann();
+		//
+		// 	advise(x, 'm0', trace('m0', true));
+		// 	advise(x, 'n0', trace('n0', true));
+		// 	advise(x, 'a',  trace('a',  true));
+		//
+		// 	x.a(1, 1);
 		}
 	]);
 
