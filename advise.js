@@ -35,7 +35,7 @@
 	Node[pname].destroy = Node[pname].unadvise = Node[pname].remove;
 
 	const convertAdvices = fn => {
-		const root = new Node(), meta = fn[dcl.advice] || {};
+		const root = new Node(), meta = fn[dcl.advice] || {original: fn};
 		for (let i = 0;; ++i) {
 			const node = new Node(root);
 			if (!i) {
@@ -64,7 +64,7 @@
 		if (typeof node.prev_around.around != 'function') {
 			dcl._error('wrong super arg');
 		}
-		node.around = around.call(advice, node.prev_around.around || null);
+		node.around = around.call(advice, node.prev_around.around);
 		if (typeof node.around != 'function') {
 			dcl._error('wrong super result');
 		}
