@@ -232,7 +232,7 @@
 			return result;
 		};
 		stub[dcl.advice] = advice;
-		advice.value = fn;
+		advice.original = fn;
 		return stub;
 	};
 
@@ -266,7 +266,7 @@
 			return result;
 		};
 		stub[dcl.advice] = advice;
-		advice.getter = getter;
+		advice.original = getter;
 		return stub;
 	};
 
@@ -299,7 +299,7 @@
 			}
 		};
 		stub[dcl.advice] = advice;
-		advice.setter = setter;
+		advice.original = setter;
 		return stub;
 	};
 
@@ -517,6 +517,8 @@
 	dcl.iterateOverPrototypes = iterateOverPrototypes;
 	dcl.getPropertyDescriptor = getPropertyDescriptor;
 	dcl.collectPropertyDescriptors = collectPropertyDescriptors;
+
+	// introspection
 	dcl.isSubset = isSubset;
 	dcl.hasMixin = (ctr, mixin) => ctr[dcl.meta] && ctr[dcl.meta].mixins.some(m => m === mixin);
 
