@@ -6,7 +6,6 @@
 
 	class Node {
 		constructor (parent) {
-			super();
 			this.parent = parent || this;
 		}
 		removeTopic (topic) {
@@ -17,13 +16,13 @@
 			}
 		}
 		remove () {
+			let next = this.next_around;
+
 			dcl._sideAdvices.forEach(name => this.removeTopic(name));
+			this.removeTopic('around');
 
 			// remove & recreate around advices
-			const parent = this.parent;
-			let   next = this.next_around;
-			this.removeTopic('after');
-			for (; next && next !== parent; next = next.next_around) {
+			for (const parent = this.parent; next && next !== parent; next = next.next_around) {
 				next.around = next.originalAround(next.prev_around.around);
 			}
 		}
@@ -36,13 +35,14 @@
 	Node[pname].destroy = Node[pname].unadvise = Node[pname].remove;
 
 	const convertAdvices = fn => {
-		const root = new Node(), meta = fn[dcl.meta] || {};
-		for (let i = 0, done = true;; ++i) {
+		const root = new Node(), meta = fn[dcl.advice] || {};
+		for (let i = 0;; ++i) {
 			const node = new Node(root);
 			if (!i) {
-				node.around = fn;
+				node.around = meta.original;
 				root.addTopic(node, 'around');
 			};
+			let done = true;
 			dcl._sideAdvices.forEach(name => {
 				if (meta[name] && i < meta[name].length) {
 					node[name] = meta[name][i];
@@ -61,7 +61,7 @@
 		}
 		node.originalAround = around;
 		root.addTopic(node, 'around');
-		if (node.prev_around.around && typeof node.prev_around.around != 'function') {
+		if (typeof node.prev_around.around != 'function') {
 			dcl._error('wrong super arg');
 		}
 		node.around = around.call(advice, node.prev_around.around || null);
@@ -217,7 +217,9 @@
 	};
 
 	const convertProp = prop => {
-		const newProp = {...prop}, replace;
+		const newProp = {};
+		Object.getOwnPropertyNames(prop).forEach(name => newProp[name] = prop[name]);
+		let replace;
 		if (prop.get || prop.set) { // accessor descriptor
 			if (prop.get && !prop.get[advise.meta]) {
 				newProp.get = makeGetStub(prop.get);
@@ -246,14 +248,14 @@
 			}
 		}
 		const newProp = convertProp(prop);
-		if (!newProp) { return null; }
-		const remove = Object[pname].hasOwnProperty(instance, name);
-		Object.defineProperty(instance, name, newProp);
-		const handle = {};
-		handle.destroy = handle.unadvise = handle.remove = () => {
-			remove ? delete instance[name] : Object.defineProperty(instance, name, prop);
-		};
-		return handle;
+		if (newProp) {
+			const isAdded = Object[pname].hasOwnProperty(instance, name);
+			Object.defineProperty(instance, name, newProp);
+			const remove = isAdded ? (() => delete instance[name]) : (() => Object.defineProperty(instance, name, prop));
+			newProp.get && (newProp.get.remove = remove);
+			newProp.set && (newProp.set.remove = remove);
+			newProp.value && (newProp.value.remove = remove);
+		}
 	};
 
 	const combineHandles = handles => {
@@ -270,11 +272,10 @@
 			handles = Object.keys(name).filter(key => typeof name[key] == 'object').
 				map(name => advise(instance, key, name[key]));
 		} else {
-			const handle = convertProperty(instance, name, !(advice.before || advice.around || advice.after)),
-				prop = Object.getOwnPropertyDescriptor(instance, name);
+			convertProperty(instance, name, !(advice.before || advice.around || advice.after));
+			const prop = Object.getOwnPropertyDescriptor(instance, name);
 			handles = ['get', 'set', 'value'].
 				map(name => prop[name] && addAdvice(prop[name][advise.meta], advice));
-			handles.push(handle);
 		}
 		return combineHandles(handles.filter(handle => handle));
 	};
@@ -287,6 +288,12 @@
 	advise.after  = (instance, name, f) => advise(instance, name, {after:  f});
 	advise.around = (instance, name, f) => advise(instance, name, {around: f});
 	advise.Node = Node;
+
+	advise.isAdvised = (instance, name) => {
+		const prop = Object.getOwnPropertyDescriptor(instance, name);
+		return prop && (prop.get && prop.get[advise.meta] ||
+			prop.set && prop.set[advise.meta] || prop.value && prop.value[advise.meta]);
+	};
 
 	return advise;
 });
