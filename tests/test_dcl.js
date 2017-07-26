@@ -358,6 +358,29 @@
 			eval(t.TEST('xab instanceof XA'));
 			eval(t.TEST('xab instanceof X'));
 			eval(t.TEST('xab instanceof Object'));
+		},
+		function test_flattenMixins (t) {
+			const A = Base => class extends Base {};
+			const B = Base => class extends Base {};
+			const C = Base => class extends Base {};
+
+			const X = function () {};
+
+			const matrix = [
+				dcl(X, A, B, C),
+				dcl(X, A, [B, C]),
+				dcl(X, [A, B], C),
+				dcl(X, [A, B, C]),
+				dcl(X, [[A, B, C]]),
+				dcl(X, [[A], [[B]], [[[C]]]])
+			];
+
+			for (let i = 0; i < matrix.length; ++i) {
+				for (let j = 0; j < matrix.length; ++j) {
+					eval(t.TEST('dcl.isSubset(matrix[i], matrix[j])'));
+					eval(t.TEST('dcl.isSubset(matrix[j], matrix[i])'));
+				}
+			}
 		}
 	]);
 

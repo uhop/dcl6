@@ -332,9 +332,21 @@
 		}});
 	};
 
+	const flatten = (target, source) => {
+		source.forEach(value => {
+			if (value instanceof Array) {
+				flatten(target, value);
+			} else {
+				target.push(value);
+			}
+		});
+		return target;
+	};
+
 	function dcl(base, ...mixins) {
 		// normalize parameters
 		base = base || Object;
+		mixins = flatten([], mixins);
 
 		// collect mixins and bases
 		const bases = [], mixes = [], meta = base[dcl.meta];
