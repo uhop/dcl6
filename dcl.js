@@ -474,6 +474,7 @@
 			ctr.hasOwnProperty('name') && ctr.name;
 		if (name && name !== 'Object') {
 			Object.defineProperty(ctr, 'name', {value: name, configurable: true});
+			Object.defineProperty(layerCtr, 'name', {value: name + '/dcl', configurable: true});
 		}
 
 		// impersonate a constructor
