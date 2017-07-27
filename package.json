@@ -17,7 +17,7 @@
   },
   "scripts": {
     "test": "node tests/tests.js",
-    "dist": "node node_modules/heya-globalize/index.js"
+    "dist": "node node_modules/heya-globalize/index.js && node node_modules/heya-globalize/index.js --es6 --target=es6"
   },
   "github": "http://github.com/uhop/dcl6",
   "repository": {
@@ -35,7 +35,6 @@
   "browserGlobals": {
     "!root": "dcl",
     "./dcl": "dcl",
-    "./advise": "advise",
     "./debug": "!dcl"
   }
 }
