@@ -91,10 +91,10 @@
 			}
 			node.originalAround = around;
 			root.addTopic(node, 'around');
-			if (typeof node.prev_around.around != 'function') {
+			if (node.prev_around.around && typeof node.prev_around.around != 'function') {
 				dcl._error('wrong super arg');
 			}
-			node.around = around.call(advice, node.prev_around.around);
+			node.around = around.call(advice, node.prev_around.around || null);
 			if (typeof node.around != 'function') {
 				dcl._error('wrong super result');
 			}
@@ -234,9 +234,9 @@
 		let prop = dcl.getPropertyDescriptor(instance, name);
 		if (!prop) {
 			if (isAccessor) {
-				prop = {get: () => {}, set: () => {}, configurable: true};
+				prop = {get: undefined, set: undefined, configurable: true};
 			} else {
-				prop = {value: () => {}, writable: true, configurable: true};
+				prop = {value: undefined, writable: true, configurable: true};
 			}
 		}
 		const newProp = convertProp(prop);
