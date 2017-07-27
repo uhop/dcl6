@@ -192,7 +192,7 @@
 	const makeValueStub = (fn, advice) => {
 		if (!hasSideAdvices(advice) && !hasSideAdvices(advice, 'get_')) { return fn; }
 		fn = fn || (() => {});
-		const stub = function () {
+		const stubValue = function () {
 			let i, fns = advice.get_before, result, thrown = false;
 			const makeReturn = value => { result = value; thrown = false; }
 			const makeThrow  = value => { result = value; thrown = true; }
@@ -231,15 +231,15 @@
 			}
 			return result;
 		};
-		stub[dcl.advice] = advice;
+		stubValue[dcl.advice] = advice;
 		advice.original = fn;
-		return stub;
+		return stubValue;
 	};
 
 	const makeGetStub = (getter, advice) => {
 		if (!hasSideAdvices(advice, 'get_')) { return getter; }
 		getter = getter || (() => {});
-		const stub = function () {
+		const stubGetter = function () {
 			let i, fns = advice.get_before, result, thrown = false;
 			const makeReturn = value => { result = value; thrown = false; }
 			const makeThrow  = value => { result = value; thrown = true; }
@@ -265,15 +265,15 @@
 			}
 			return result;
 		};
-		stub[dcl.advice] = advice;
+		stubGetter[dcl.advice] = advice;
 		advice.original = getter;
-		return stub;
+		return stubGetter;
 	};
 
 	const makeSetStub = (setter, advice) => {
 		if (!hasSideAdvices(advice, 'set_')) { return setter; }
 		setter = setter || (() => {});
-		const stub = function (value) {
+		const stubSetter = function (value) {
 			let i, fns = advice.set_before, result, thrown = false;
 			const makeThrow  = value => { result = value; thrown = true; }
 			// run setter advices
@@ -298,9 +298,10 @@
 				throw result;
 			}
 		};
-		stub[dcl.advice] = advice;
-		advice.original = setter;
-		return stub;
+		const adviceCopy = advice.hasOwnProperty('original') ? Object.create(advice) : advice;
+		stubSetter[dcl.advice] = adviceCopy;
+		adviceCopy.original = setter;
+		return stubSetter;
 	};
 
 	const makeCtrStub = (ctr, layerCtr, advice) => {
