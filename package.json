@@ -13,8 +13,10 @@
   "devDependencies": {
     "babel-cli": "^6.24.1",
     "babel-preset-es2015": "^6.24.1",
+    "coveralls": "^2.13.1",
     "heya-globalize": "^1.2.1",
-    "heya-unit": "^0.3.0"
+    "heya-unit": "^0.3.0",
+    "istanbul": "^0.4.5"
   },
   "scripts": {
     "test": "node tests/tests.js",
