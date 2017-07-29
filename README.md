@@ -4,6 +4,7 @@
 [![Dependencies][deps-image]][deps-url]
 [![devDependencies][dev-deps-image]][dev-deps-url]
 <!-- [![NPM version][npm-image]][npm-url] -->
+[![Analytics](https://ga-beacon.appspot.com/UA-103617480-1/uhop/dcl6/readme?pixel&useReferer)](https://github.com/uhop/dcl6)
 
 An experimental version 6.0 of [dcl](https://github.com/uhop/dcl) for ES6.
 
