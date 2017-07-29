@@ -304,7 +304,7 @@ export default (function(_,f){return f();})
 		return stubSetter;
 	};
 
-	const makeCtrStub = (ctr, layerCtr, advice) => {
+	const makeCtrStub = (ctr, advice, layerCtr) => {
 		if (!advice) {
 			return new Proxy(ctr, {construct: function (_, args) {
 				return new layerCtr(...args);
@@ -493,7 +493,8 @@ export default (function(_,f){return f();})
 		// impersonate a constructor
 		const advice = Object[pname].hasOwnProperty.call(advices, cname) && advices[cname];
 		advice && advice.before && advice.before.reverse();
-		ctr = makeCtrStub(ctr, layerCtr, advice);
+		ctr = makeCtrStub(ctr, advice, layerCtr);
+		Object.defineProperty(layerCtr[pname], cname, {value: ctr, configurable: true});
 
 		return dcl._makeCtr(ctr);
 	}
