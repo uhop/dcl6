@@ -19,8 +19,8 @@
     "istanbul": "^0.4.5"
   },
   "scripts": {
-    "test": "node tests/tests.js",
-    "cover": "istanbul cover tests/tests.js && cat ./coverage/lcov.info | coveralls",
+    "test": "istanbul cover tests/tests.js",
+    "coveralls": "cat ./coverage/lcov.info | coveralls",
     "dist-g": "node node_modules/heya-globalize/index.js",
     "dist-es6": "node node_modules/heya-globalize/index.js --es6 --target=es6",
     "dist-es5": "babel es6/ -d lib/",

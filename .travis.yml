@@ -10,7 +10,7 @@ git:
   depth: 1
 
 script:
-  - "istanbul cover tests/tests.js"
+  - "istanbul cover tests/tests.js --report lcovonly"
 
 after_success:
   - "cat ./coverage/lcov.info | coveralls"
