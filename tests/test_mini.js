@@ -10,7 +10,8 @@
 				proto.hasOwnProperty(dcl.declaredClass) && proto[dcl.declaredClass]
 			);
 		});
-		return names.filter(name => name).reverse().join(',');
+		names.shift();
+		return names.reverse().join(',');
 	}
 
 	function Named (name) {
