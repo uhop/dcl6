@@ -21,11 +21,12 @@
   "scripts": {
     "test": "istanbul cover tests/tests.js",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
-    "dist-g": "node node_modules/heya-globalize/index.js",
+    "dist-globals": "node node_modules/heya-globalize/index.js --target=dist",
     "dist-es6": "node node_modules/heya-globalize/index.js --es6 --target=es6",
-    "dist-es5": "babel es6/ -d lib/",
-    "clean": "rm -fr dist/ es6/ lib/",
-    "dist": "npm run clean && npm run dist-g && npm run dist-es6 && npm run dist-es5",
+    "dist-es5": "babel dist/ -d dist-es5/",
+    "dist-babel": "babel es6/ -d lib/",
+    "clean": "rm -fr dist/ dist-es5/ es6/ lib/",
+    "dist": "npm run clean && npm run dist-globals && npm run dist-es6 && npm run dist-es5 && npm run dist-babel",
     "build": "npm run dist",
     "prepublish": "npm run dist"
   },
