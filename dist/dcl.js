@@ -304,33 +304,29 @@
 		return stubSetter;
 	};
 
-	const makeCtrStub = (ctr, advice, layerCtr) => {
-		if (!advice) {
-			return new Proxy(ctr, {construct: function (_, args) {
-				return new layerCtr(...args);
-			}});
-		}
-		dcl._checkCtrAdvices();
-		return new Proxy(ctr, {construct: function (target, args) {
-			let i, fns = advice.before, result, thrown = false;
-			const makeThrow  = value => { result = value; thrown = true; }
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].apply(null, args);
+	const makeCtrStub = (ctr, advice, layer) => {
+		dcl._checkCtrAdvices(advice);
+
+		const layerCtr = advice ? class extends ctr {
+			constructor (...args) {
+				super(...args);
+				let i, fns = advice.after, result = this, thrown = false;
+				const makeThrow  = value => { result = value; thrown = true; }
+				if (fns) {
+					for (i = 0; i < fns.length; ++i) {
+						fns[i].call(result, args, result, null, makeThrow);
+					}
+				}
+				if (thrown) {
+					throw result;
 				}
 			}
-			result = new layerCtr(...args);
-			fns = advice.after;
-			if (fns) {
-				for (i = 0; i < fns.length; ++i) {
-					fns[i].call(result, args, result, null, makeThrow);
-				}
-			}
-			if (thrown) {
-				throw result;
-			}
-			return result;
-		}});
+		} : class extends ctr {};
+		Object.defineProperties(layerCtr[pname], layer);
+		// Object.defineProperty(layerCtr[pname], cname, {value: ctr, configurable: true});
+		const prop = Object.getOwnPropertyDescriptor(ctr, 'name');
+		prop && Object.defineProperty(layerCtr, 'name', prop);
+		return layerCtr;
 	};
 
 	const flatten = (target, source) => {
@@ -479,24 +475,16 @@
 		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
 
 		// finalize a constructor
-		const layerCtr = class extends ctr {};
-		Object.defineProperties(layerCtr[pname], layer);
-		ctr[dcl.meta] = {base, mixins, ctr, layerCtr};
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
 			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
 			ctr.hasOwnProperty('name') && ctr.name;
 		if (name && name !== 'Object') {
 			Object.defineProperty(ctr, 'name', {value: name, configurable: true});
-			Object.defineProperty(layerCtr, 'name', {value: name + '/dcl', configurable: true});
 		}
-
-		// impersonate a constructor
 		const advice = Object[pname].hasOwnProperty.call(advices, cname) && advices[cname];
-		advice && advice.before && advice.before.reverse();
-		ctr = makeCtrStub(ctr, advice, layerCtr);
-		Object.defineProperty(layerCtr[pname], cname, {value: ctr, configurable: true});
-
-		return dcl._makeCtr(ctr);
+		const layerCtr = makeCtrStub(ctr, advice, layer);
+		ctr[dcl.meta] = {base, mixins, ctr, layerCtr};
+		return dcl._makeCtr(layerCtr);
 	}
 
 	const isSubset = (ctr, subset) => {

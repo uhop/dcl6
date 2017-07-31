@@ -26,6 +26,7 @@
     "dist-es5": "babel es6/ -d lib/",
     "clean": "rm -fr dist/ es6/ lib/",
     "dist": "npm run clean && npm run dist-g && npm run dist-es6 && npm run dist-es5",
+    "build": "npm run dist",
     "prepublish": "npm run dist"
   },
   "github": "http://github.com/uhop/dcl6",
