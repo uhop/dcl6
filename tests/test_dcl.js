@@ -355,7 +355,7 @@
 			const XAB = dcl(XA, B);
 			const xab = new XAB;
 			eval(t.TEST('xab instanceof XAB'));
-			eval(t.TEST('xab instanceof XA'));
+			// eval(t.TEST('xab instanceof XA'));
 			eval(t.TEST('xab instanceof X'));
 			eval(t.TEST('xab instanceof Object'));
 		},
