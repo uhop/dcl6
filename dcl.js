@@ -476,8 +476,7 @@
 
 		// finalize a constructor
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
-			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass] ||
-			ctr.hasOwnProperty('name') && ctr.name;
+			Object[pname].hasOwnProperty.call(ctr[pname], dcl.declaredClass) && ctr[pname][dcl.declaredClass];
 		if (name && name !== 'Object') {
 			Object.defineProperty(ctr, 'name', {value: name, configurable: true});
 		}
