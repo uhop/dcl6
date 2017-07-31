@@ -324,6 +324,8 @@
 		} : class extends ctr {};
 		Object.defineProperties(layerCtr[pname], layer);
 		// Object.defineProperty(layerCtr[pname], cname, {value: ctr, configurable: true});
+		const prop = Object.getOwnPropertyDescriptor(ctr, 'name');
+		prop && Object.defineProperty(layerCtr, 'name', prop);
 		return layerCtr;
 	};
 
