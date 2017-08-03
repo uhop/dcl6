@@ -159,7 +159,7 @@
 
 		iterateOverPrototypes(o, proto => {
 			Object.getOwnPropertyNames(proto).forEach(collect);
-			Object.getOwnPropertySymbols(proto).forEach(collect);
+			Object.getOwnPropertySymbols && Object.getOwnPropertySymbols(proto).forEach(collect);
 		});
 		return props;
 	}
@@ -467,12 +467,12 @@
 			if (ownDirectives) {
 				const collect = collectDirectives(ownDirectives, mixin[pname]);
 				Object.getOwnPropertyNames(ownDirectives).forEach(collect);
-				Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
+				Object.getOwnPropertySymbols && Object.getOwnPropertySymbols(ownDirectives).forEach(collect);
 			}
 		});
 		// apply advices
 		Object.getOwnPropertyNames(advices).forEach(createDirectives);
-		Object.getOwnPropertySymbols(advices).forEach(createDirectives);
+		Object.getOwnPropertySymbols && Object.getOwnPropertySymbols(advices).forEach(createDirectives);
 
 		// finalize a constructor
 		const name = ctr.hasOwnProperty(dcl.declaredClass) && ctr[dcl.declaredClass] ||
@@ -504,10 +504,13 @@
 	};
 
 	// symbols
-	dcl.declaredClass = Symbol('dcl.name');
-	dcl.directives = Symbol('dcl.directives');
-	dcl.meta = Symbol('dcl.meta');
-	dcl.advice = Symbol('dcl.advice');
+
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+
+	dcl.declaredClass = S('dcl.name');
+	dcl.directives = S('dcl.directives');
+	dcl.meta = S('dcl.meta');
+	dcl.advice = S('dcl.advice');
 
 	// weavers
 	dcl.weavers = {

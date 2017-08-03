@@ -275,7 +275,9 @@ import m0 from "./dcl";export default (function(_,f){return f(m0);})
 
 	// export
 
-	advise.meta = Symbol('dcl.advise.meta');
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+
+	advise.meta = S('dcl.advise.meta');
 
 	advise.before = (instance, name, f) => advise(instance, name, {before: f});
 	advise.after  = (instance, name, f) => advise(instance, name, {after:  f});

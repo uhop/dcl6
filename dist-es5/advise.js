@@ -350,7 +350,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 	// export
 
-	advise.meta = Symbol('dcl.advise.meta');
+	var S = typeof Symbol != 'undefined' ? Symbol : function (name) {
+		return '__' + name;
+	};
+
+	advise.meta = S('dcl.advise.meta');
 
 	advise.before = function (instance, name, f) {
 		return advise(instance, name, { before: f });
