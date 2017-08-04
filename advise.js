@@ -275,7 +275,7 @@
 
 	// export
 
-	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name.replace('.', '_'));
 
 	advise.meta = S('dcl.advise.meta');
 

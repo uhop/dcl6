@@ -505,7 +505,7 @@
 
 	// symbols
 
-	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name.replace('.', '_'));
 
 	dcl.declaredClass = S('dcl.name');
 	dcl.directives = S('dcl.directives');
