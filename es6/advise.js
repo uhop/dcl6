@@ -208,21 +208,36 @@ import m0 from "./dcl";export default (function(_,f){return f(m0);})
 		return stub;
 	};
 
-	const convertProp = prop => {
+	const convertProp = (prop, isAccessor) => {
+		if (prop.get && prop.get[advise.meta] ||
+				prop.set && prop.set[advise.meta] ||
+				prop.value && prop.value[advise.meta]) {
+			return false;
+		}
 		const newProp = {};
 		Object.getOwnPropertyNames(prop).forEach(name => newProp[name] = prop[name]);
 		let replace;
-		if (prop.get || prop.set) { // accessor descriptor
-			if (prop.get && !prop.get[advise.meta]) {
+		if (isAccessor) {
+			if (prop.get || prop.set) { // accessor descriptor
 				newProp.get = makeGetStub(prop.get);
 				replace = replace || newProp.get != prop.get;
-			}
-			if (prop.set && !prop.set[advise.meta]) {
 				newProp.set = makeSetStub(prop.set);
 				replace = replace || newProp.set != prop.set;
+			} else { // data descriptor
+				const value = prop.value;
+				newProp.get = makeGetStub(() => value);
+				delete newProp.value;
+				delete newProp.writable;
+				replace = true;
 			}
-		} else { // data descriptor
-			if (prop.value && !prop.value[advise.meta]) {
+		} else {
+			if (prop.get || prop.set) { // accessor descriptor
+				const get = prop.get;
+				newProp.value = makeValueStub(function () { return get.call(this).apply(this, arguments); });
+				delete newProp.get;
+				delete newProp.set;
+				replace = true;
+			} else { // data descriptor
 				newProp.value = makeValueStub(prop.value);
 				replace = replace || newProp.value != prop.value;
 			}
@@ -239,7 +254,7 @@ import m0 from "./dcl";export default (function(_,f){return f(m0);})
 				prop = {value: undefined, writable: true, configurable: true};
 			}
 		}
-		const newProp = convertProp(prop);
+		const newProp = convertProp(prop, isAccessor);
 		if (newProp) {
 			const isReplaced = Object[pname].hasOwnProperty(instance, name);
 			Object.defineProperty(instance, name, newProp);
@@ -275,7 +290,7 @@ import m0 from "./dcl";export default (function(_,f){return f(m0);})
 
 	// export
 
-	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name.replace('.', '_'));
 
 	advise.meta = S('dcl.advise.meta');
 

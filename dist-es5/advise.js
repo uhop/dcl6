@@ -265,25 +265,44 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 		return stub;
 	};
 
-	var convertProp = function convertProp(prop) {
+	var convertProp = function convertProp(prop, isAccessor) {
+		if (prop.get && prop.get[advise.meta] || prop.set && prop.set[advise.meta] || prop.value && prop.value[advise.meta]) {
+			return false;
+		}
 		var newProp = {};
 		Object.getOwnPropertyNames(prop).forEach(function (name) {
 			return newProp[name] = prop[name];
 		});
 		var replace = void 0;
-		if (prop.get || prop.set) {
-			// accessor descriptor
-			if (prop.get && !prop.get[advise.meta]) {
+		if (isAccessor) {
+			if (prop.get || prop.set) {
+				// accessor descriptor
 				newProp.get = makeGetStub(prop.get);
 				replace = replace || newProp.get != prop.get;
-			}
-			if (prop.set && !prop.set[advise.meta]) {
 				newProp.set = makeSetStub(prop.set);
 				replace = replace || newProp.set != prop.set;
+			} else {
+				// data descriptor
+				var value = prop.value;
+				newProp.get = makeGetStub(function () {
+					return value;
+				});
+				delete newProp.value;
+				delete newProp.writable;
+				replace = true;
 			}
 		} else {
-			// data descriptor
-			if (prop.value && !prop.value[advise.meta]) {
+			if (prop.get || prop.set) {
+				// accessor descriptor
+				var get = prop.get;
+				newProp.value = makeValueStub(function () {
+					return get.call(this).apply(this, arguments);
+				});
+				delete newProp.get;
+				delete newProp.set;
+				replace = true;
+			} else {
+				// data descriptor
 				newProp.value = makeValueStub(prop.value);
 				replace = replace || newProp.value != prop.value;
 			}
@@ -300,7 +319,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 				prop = { value: undefined, writable: true, configurable: true };
 			}
 		}
-		var newProp = convertProp(prop);
+		var newProp = convertProp(prop, isAccessor);
 		if (newProp) {
 			var isReplaced = Object[pname].hasOwnProperty(instance, name);
 			Object.defineProperty(instance, name, newProp);
@@ -351,7 +370,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 	// export
 
 	var S = typeof Symbol != 'undefined' ? Symbol : function (name) {
-		return '__' + name;
+		return '__' + name.replace('.', '_');
 	};
 
 	advise.meta = S('dcl.advise.meta');

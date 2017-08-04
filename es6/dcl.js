@@ -2,7 +2,6 @@ export default (function(_,f){return f();})
 ([], function () {
 	'use strict';
 
-
 	const cname = 'constructor', pname = 'prototype';
 
 	const findCommonBase = bases => {
@@ -95,36 +94,59 @@ export default (function(_,f){return f();})
 			const advice = ownDirectives[name];
 			if (advice.around || advice.get && advice.get.around || advice.set && advice.set.around) {
 				let replace, prop = getPropertyDescriptor(ctr[pname], name);
-				if (prop) { // guided by existing descriptor
-					if (prop.get || prop.set) { // accessor descriptor
-						if (advice.get && advice.get.around) {
-							prop.get = advice.get.around.call(advice, prop.get);
+				if (advice.hasOwnProperty('around')) { // guided by existing advices
+					// expects data
+					if (prop) {
+						if (prop.get || prop.set) { // accessor descriptor
+							const get = prop.get;
+							prop = {
+								value: advice.around(get ?
+									function () { return get.call(this).apply(this, arguments); } :
+									(Object[pname][name] || null)),
+								writable:     true,
+								configurable: true
+							};
 							replace = true;
-						}
-						if (advice.set && advice.set.around) {
-							prop.set = advice.set.around.call(advice, prop.set);
-							replace = true;
-						}
-					} else { // data descriptor
-						if (advice.around) {
+						} else { // data descriptor
 							prop.value = advice.around(prop.value);
 							replace = true;
 						}
-					}
-				} else { // guided by existing advices
-					replace = true;
-					if (advice.around) { // data descriptor
+					} else { // no previous descriptor
 						prop = {
 							value: advice.around(Object[pname][name] || null),
-							configurable: true,
-							writable:     true
+							writable:     true,
+							configurable: true
 						};
-					} else { // accessor descriptor
+						replace = true;
+					}
+				} else if (advice.get && advice.get.around || advice.set && advice.set.around) {
+					// expects accessors
+					if (prop) {
+						if (prop.get || prop.set) { // accessor descriptor
+							if (advice.get && advice.get.around) {
+								prop.get = advice.get.around.call(advice, prop.get);
+								replace = true;
+							}
+							if (advice.set && advice.set.around) {
+								prop.set = advice.set.around.call(advice, prop.set);
+								replace = true;
+							}
+						} else { // data descriptor
+							const value = prop.value;
+							prop = {
+								get: advice.get && advice.get.around && advice.get.around.call(advice, () => value) || undefined,
+								set: advice.set && advice.set.around && advice.set.around.call(advice, null) || undefined,
+								configurable: true
+							};
+							replace = true;
+						}
+					} else { // no previous descriptor
 						prop = {
 							get: advice.get && advice.get.around && advice.get.around.call(advice, null) || undefined,
 							set: advice.set && advice.set.around && advice.set.around.call(advice, null) || undefined,
 							configurable: true
 						};
+						replace = true;
 					}
 				}
 				replace && Object.defineProperty(ctr[pname], name, prop);
@@ -505,7 +527,7 @@ export default (function(_,f){return f();})
 
 	// symbols
 
-	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name);
+	const S = typeof Symbol != 'undefined' ? Symbol : (name => '__' + name.replace('.', '_'));
 
 	dcl.declaredClass = S('dcl.name');
 	dcl.directives = S('dcl.directives');
