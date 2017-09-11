@@ -25,7 +25,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 			} else if (Object[pname].isPrototypeOf.call(base[pname], commonBase[pname])) {
 				commonBase = base;
 			} else {
-				dcl._error('incompatible bases');
+				dcl._error('incompatible bases', { bases: bases });
 			}
 		}
 		return commonBase;
@@ -73,7 +73,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 		// final checks and return
 		if (connectivity.size != output.length) {
-			dcl._error('dependency cycle');
+			dcl._error('dependency cycle', { mixins: mixins });
 		}
 		return output.reverse();
 	};
@@ -93,11 +93,11 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 		return obj;
 	};
 
-	var collectSideAdvice = function collectSideAdvice(target, source, path) {
+	var collectSideAdvice = function collectSideAdvice(target, source, path, info) {
 		var fn = getPath(source, path);
 		if (fn) {
 			if (typeof fn != 'function') {
-				dcl._error(path + ' advice is not function');
+				dcl._error(path + ' advice is not function', { path: path, proto: info.proto, name: info.name });
 			}
 			if (target[path]) {
 				target[path].push(fn);
@@ -225,7 +225,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 			var prop = Object.getOwnPropertyDescriptor(proto, key);
 			if (prop) {
 				if (prop.get || prop.set) {
-					dcl._error('wrong value descriptor');
+					dcl._error('expected value descriptor', { proto: proto, key: key });
 				}
 				values.push(prop.value);
 			}
@@ -512,12 +512,12 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 				var advice = typeof ownDirectives[name] == 'string' ? { chainWith: ownDirectives[name] } : ownDirectives[name];
 				if (typeof advice.chainWith == 'string') {
 					if (name === cname) {
-						dcl._error('no chaining rule for constructors: always "after"');
+						dcl._error('no chaining rule for constructors: always "after"', { proto: proto });
 					}
 					if (!Object[pname].hasOwnProperty.call(directives, name)) {
 						directives[name] = advice.chainWith;
 					} else if (directives[name] !== advice.chainWith) {
-						dcl._error('conflicting chaining directives');
+						dcl._error('conflicting chaining directives', { proto: proto, name: name, old: directives[name], new: advice.chainWith });
 					}
 				}
 				if (!Object[pname].hasOwnProperty.call(advices, name)) {
@@ -525,7 +525,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 				}
 				var target = advices[name];
 				dcl._sideAdvices.forEach(function (path) {
-					return collectSideAdvice(target, advice, path);
+					return collectSideAdvice(target, advice, path, { proto: proto, name: name });
 				});
 			};
 		};
@@ -552,7 +552,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 				if (prop.get || prop.set) {
 					// accessor descriptor
 					if (hasDirective) {
-						dcl._error('chaining cannot be applied to accessors');
+						dcl._error('chaining cannot be applied to accessors', { name: name, directive: directives[name] });
 					}
 					newProp = {
 						get: makeGetStub(prop.get, advice),
@@ -567,12 +567,12 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 					// data descriptor
 					var value = prop.value;
 					if (typeof value !== 'function') {
-						dcl._error('wrong value');
+						dcl._error('value is expected to be a function', { name: name, directive: directives[name] });
 					}
 					if (hasDirective) {
 						var weaver = dcl.weavers[directives[name]];
 						if (!weaver) {
-							dcl._error('there is no weaver: ' + directives[name]);
+							dcl._error('there is no weaver: ' + directives[name], { name: name, directive: directives[name] });
 						}
 						value = weaver(collectValues(ctr[pname], name));
 					}

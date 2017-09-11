@@ -1,4 +1,4 @@
-/* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
+(function(_,f){f(window.dcl[""].dcl,window.dcl.advise,window.dcl.mixins.Named);})
 (['.dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
 	'use strict';
 

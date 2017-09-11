@@ -13,7 +13,7 @@
 			} else if (Object[pname].isPrototypeOf.call(base[pname], commonBase[pname])) {
 				commonBase = base;
 			} else {
-				dcl._error('incompatible bases');
+				dcl._error('incompatible bases', {bases});
 			}
 		}
 		return commonBase;
@@ -58,7 +58,7 @@
 		}
 
 		// final checks and return
-		if (connectivity.size != output.length) { dcl._error('dependency cycle'); }
+		if (connectivity.size != output.length) { dcl._error('dependency cycle', {mixins}); }
 		return output.reverse();
 	}
 
@@ -75,10 +75,10 @@
 		return obj;
 	};
 
-	const collectSideAdvice = (target, source, path) => {
+	const collectSideAdvice = (target, source, path, info) => {
 		const fn = getPath(source, path);
 		if (fn) {
-			if (typeof fn != 'function') { dcl._error(path + ' advice is not function'); }
+			if (typeof fn != 'function') { dcl._error(path + ' advice is not function', {path, proto: info.proto, name: info.name}); }
 			if (target[path]) {
 				target[path].push(fn);
 			} else {
@@ -193,7 +193,7 @@
 		iterateOverPrototypes(source, proto => {
 			const prop = Object.getOwnPropertyDescriptor(proto, key);
 			if (prop) {
-				if (prop.get || prop.set) { dcl._error('wrong value descriptor'); }
+				if (prop.get || prop.set) { dcl._error('expected value descriptor', {proto, key}); }
 				values.push(prop.value);
 			}
 		});
@@ -410,13 +410,13 @@
 		const collectDirectives = (ownDirectives, proto) => name => {
 			const advice = typeof ownDirectives[name] == 'string' ? {chainWith: ownDirectives[name]} : ownDirectives[name];
 			if (typeof advice.chainWith == 'string') {
-				if (name === cname) { dcl._error('no chaining rule for constructors: always "after"'); }
+				if (name === cname) { dcl._error('no chaining rule for constructors: always "after"', {proto}); }
 				if (!Object[pname].hasOwnProperty.call(directives, name)) { directives[name] = advice.chainWith; }
-				else if (directives[name] !== advice.chainWith) { dcl._error('conflicting chaining directives'); }
+				else if (directives[name] !== advice.chainWith) { dcl._error('conflicting chaining directives', {proto, name, old: directives[name], new: advice.chainWith}); }
 			}
 			if (!Object[pname].hasOwnProperty.call(advices, name)) { advices[name] = {}; }
 			const target = advices[name];
-			dcl._sideAdvices.forEach(path => collectSideAdvice(target, advice, path));
+			dcl._sideAdvices.forEach(path => collectSideAdvice(target, advice, path, {proto, name}));
 		};
 
 		// prepare to apply advices
@@ -435,7 +435,7 @@
 			if (prop) { // guided by descriptor
 				const hasDirective = Object[pname].hasOwnProperty.call(directives, name);
 				if (prop.get || prop.set) { // accessor descriptor
-					if (hasDirective) { dcl._error('chaining cannot be applied to accessors'); }
+					if (hasDirective) { dcl._error('chaining cannot be applied to accessors', {name, directive: directives[name]}); }
 					newProp = {
 						get: makeGetStub(prop.get, advice),
 						set: makeSetStub(prop.set, advice),
@@ -445,10 +445,10 @@
 					if (newProp.get === prop.get && newProp.set === prop.set) { newProp = null; }
 				} else { // data descriptor
 					let value = prop.value;
-					if (typeof value !== 'function') { dcl._error('wrong value'); }
+					if (typeof value !== 'function') { dcl._error('value is expected to be a function', {name, directive: directives[name]}); }
 					if (hasDirective) {
 						const weaver = dcl.weavers[directives[name]];
-						if (!weaver) { dcl._error('there is no weaver: ' + directives[name]); }
+						if (!weaver) { dcl._error('there is no weaver: ' + directives[name], {name, directive: directives[name]}); }
 						value = weaver(collectValues(ctr[pname], name));
 					}
 					newProp = {

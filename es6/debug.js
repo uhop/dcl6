@@ -1,4 +1,4 @@
-/* UMD.define */ (typeof define=="function"&&define||function(d,f,m){m={module:module,require:require};module.exports=f.apply(null,d.map(function(n){return m[n]||require(n)}))})
+import m0 from ".dcl";import m1 from "./advise";import m2 from "./mixins/Named";export default (function(_,f){return f(m0,m1,m2);})
 (['.dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
 	'use strict';
 

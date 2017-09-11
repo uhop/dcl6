@@ -94,7 +94,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 		return root;
 	};
 
-	var addAdvice = function addAdvice(root, advice, around) {
+	var addAdvice = function addAdvice(root, advice, around, info) {
 		var node = new Node(root);
 		if (advice.get) {
 			if (advice.get.before) {
@@ -126,16 +126,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 		}
 		if (around) {
 			if (typeof around != 'function') {
-				dcl._error('wrong super call');
+				dcl._error('wrong super call', info);
 			}
 			node.originalAround = around;
 			root.addTopic(node, 'around');
 			if (node.prev_around.around && typeof node.prev_around.around != 'function') {
-				dcl._error('wrong super arg');
+				dcl._error('wrong super arg', info);
 			}
 			node.around = around.call(advice, node.prev_around.around || null);
 			if (typeof node.around != 'function') {
-				dcl._error('wrong super result');
+				dcl._error('wrong super result', info);
 			}
 		}
 		return node;
@@ -144,7 +144,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 	var makeValueStub = function makeValueStub(value) {
 		// TODO: verify that value is a function
 		if (typeof value != 'function') {
-			dcl._error();
+			dcl._error('a function was expected');
 		}
 		var root = convertAdvices(value);
 		var stub = function stub() {
@@ -265,7 +265,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 		return stub;
 	};
 
-	var convertProp = function convertProp(prop, isAccessor) {
+	var convertProp = function convertProp(prop, isAccessor, info) {
 		if (prop.get && prop.get[advise.meta] || prop.set && prop.set[advise.meta] || prop.value && prop.value[advise.meta]) {
 			return false;
 		}
@@ -297,13 +297,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 				var get = prop.get;
 				newProp.value = makeValueStub(function () {
 					return get.call(this).apply(this, arguments);
-				});
+				}, info);
 				delete newProp.get;
 				delete newProp.set;
 				replace = true;
 			} else {
 				// data descriptor
-				newProp.value = makeValueStub(prop.value);
+				newProp.value = makeValueStub(prop.value, name);
 				replace = replace || newProp.value != prop.value;
 			}
 		}
@@ -319,7 +319,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 				prop = { value: undefined, writable: true, configurable: true };
 			}
 		}
-		var newProp = convertProp(prop, isAccessor);
+		var newProp = convertProp(prop, isAccessor, { name: name });
 		if (newProp) {
 			var isReplaced = Object[pname].hasOwnProperty(instance, name);
 			Object.defineProperty(instance, name, newProp);
@@ -360,7 +360,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 			var prop = Object.getOwnPropertyDescriptor(instance, name);
 			handles = ['get', 'set', 'value'].map(function (name) {
 				return prop[name] && addAdvice(prop[name][advise.meta], advice, name !== 'value' ? advice[name] && advice[name].around : advice.around);
-			});
+			}, { name: name });
 		}
 		return combineHandles(handles.filter(function (handle) {
 			return handle;

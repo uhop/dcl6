@@ -55,7 +55,7 @@
 		return root;
 	}
 
-	const addAdvice = (root, advice, around) => {
+	const addAdvice = (root, advice, around, info) => {
 		const node = new Node(root);
 		if (advice.get) {
 			if (advice.get.before) {
@@ -87,16 +87,16 @@
 		}
 		if (around) {
 			if (typeof around != 'function') {
-				dcl._error('wrong super call');
+				dcl._error('wrong super call', info);
 			}
 			node.originalAround = around;
 			root.addTopic(node, 'around');
 			if (node.prev_around.around && typeof node.prev_around.around != 'function') {
-				dcl._error('wrong super arg');
+				dcl._error('wrong super arg', info);
 			}
 			node.around = around.call(advice, node.prev_around.around || null);
 			if (typeof node.around != 'function') {
-				dcl._error('wrong super result');
+				dcl._error('wrong super result', info);
 			}
 		}
 		return node;
@@ -104,7 +104,7 @@
 
 	const makeValueStub = value => {
 		// TODO: verify that value is a function
-		if (typeof value != 'function') { dcl._error(); }
+		if (typeof value != 'function') { dcl._error('a function was expected'); }
 		const root = convertAdvices(value);
 		const stub = function () {
 			let result, thrown, p;
@@ -208,7 +208,7 @@
 		return stub;
 	};
 
-	const convertProp = (prop, isAccessor) => {
+	const convertProp = (prop, isAccessor, info) => {
 		if (prop.get && prop.get[advise.meta] ||
 				prop.set && prop.set[advise.meta] ||
 				prop.value && prop.value[advise.meta]) {
@@ -233,12 +233,12 @@
 		} else {
 			if (prop.get || prop.set) { // accessor descriptor
 				const get = prop.get;
-				newProp.value = makeValueStub(function () { return get.call(this).apply(this, arguments); });
+				newProp.value = makeValueStub(function () { return get.call(this).apply(this, arguments); }, info);
 				delete newProp.get;
 				delete newProp.set;
 				replace = true;
 			} else { // data descriptor
-				newProp.value = makeValueStub(prop.value);
+				newProp.value = makeValueStub(prop.value, name);
 				replace = replace || newProp.value != prop.value;
 			}
 		}
@@ -254,7 +254,7 @@
 				prop = {value: undefined, writable: true, configurable: true};
 			}
 		}
-		const newProp = convertProp(prop, isAccessor);
+		const newProp = convertProp(prop, isAccessor, {name});
 		if (newProp) {
 			const isReplaced = Object[pname].hasOwnProperty(instance, name);
 			Object.defineProperty(instance, name, newProp);
@@ -283,7 +283,7 @@
 			const prop = Object.getOwnPropertyDescriptor(instance, name);
 			handles = ['get', 'set', 'value'].
 				map(name => prop[name] && addAdvice(prop[name][advise.meta], advice,
-					name !== 'value' ? advice[name] && advice[name].around : advice.around));
+					name !== 'value' ? advice[name] && advice[name].around : advice.around), {name});
 		}
 		return combineHandles(handles.filter(handle => handle));
 	};
