@@ -9,8 +9,8 @@
 	'./test_advise',
 	'./test_advices',
 	'./test_advise_accessors',
-	'./test_registry'
-	// './test_debug'
+	'./test_registry',
+	'./test_debug'
 ],
 function (unit) {
 	'use strict';

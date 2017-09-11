@@ -1,5 +1,5 @@
-import m0 from ".dcl";import m1 from "./advise";import m2 from "./mixins/Named";export default (function(_,f){return f(m0,m1,m2);})
-(['.dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
+import m0 from "./dcl";import m1 from "./advise";import m2 from "./mixins/Named";export default (function(_,f){return f(m0,m1,m2);})
+(['./dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
 	'use strict';
 
 	// set up custom names

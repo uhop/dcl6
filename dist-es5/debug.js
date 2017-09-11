@@ -1,8 +1,8 @@
 'use strict';
 
 (function (_, f) {
-	f(window.dcl[""].dcl, window.dcl.advise, window.dcl.mixins.Named);
-})(['.dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
+	f(window.dcl, window.dcl.advise, window.dcl.mixins.Named);
+})(['./dcl', './advise', './mixins/Named'], function (dcl, advise, Named) {
 	'use strict';
 
 	// set up custom names

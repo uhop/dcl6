@@ -303,7 +303,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 				replace = true;
 			} else {
 				// data descriptor
-				newProp.value = makeValueStub(prop.value, name);
+				newProp.value = makeValueStub(prop.value, info);
 				replace = replace || newProp.value != prop.value;
 			}
 		}
