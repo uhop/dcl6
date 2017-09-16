@@ -5,9 +5,6 @@
 })([], function () {
 	'use strict';
 
-	var _this = this,
-	    _arguments = arguments;
-
 	var lvl = 0;
 
 	var rep = function rep(ch, n) {
@@ -32,10 +29,10 @@
 		return {
 			before: function before() {
 				++lvl;
-				console.log((level ? pad(lvl, 2 * lvl) : '') + _this + ' => ' + name + '(' + Array.prototype.join.call(_arguments, ', ') + ')');
+				console.log((level ? pad(lvl, 2 * lvl) : '') + this + ' => ' + name + '(' + Array.prototype.join.call(arguments, ', ') + ')');
 			},
 			after: function after(args, result) {
-				console.log((level ? pad(lvl, 2 * lvl) : '') + _this + ' => ' + name + (result && result instanceof Error ? ' throws' : ' returns') + ' ' + result);
+				console.log((level ? pad(lvl, 2 * lvl) : '') + this + ' => ' + name + (result && result instanceof Error ? ' throws' : ' returns') + ' ' + result);
 				--lvl;
 			}
 		};

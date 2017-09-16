@@ -18,12 +18,12 @@
 
 	return (name, level) => {
 		return {
-			before: () => {
+			before: function () {
 				++lvl;
 				console.log((level ? pad(lvl, 2 * lvl) : '') + this + ' => ' +
 					name + '(' + Array.prototype.join.call(arguments, ', ') + ')');
 			},
-			after: (args, result) => {
+			after: function (args, result) {
 				console.log((level ? pad(lvl, 2 * lvl) : '') + this + ' => ' +
 					name + (result && result instanceof Error ? ' throws' : ' returns') +
 					' ' + result);
