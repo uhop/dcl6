@@ -91,7 +91,7 @@
 			return console.log('class doesn\'t have information compatible with dcl');
 		}
 		console.log('class "' + ctr.name + '" is based on "' + (meta.base ? meta.base.name : 'null') +
-			'" with ' + meta.mixins.length + ' mixin' (meta.mixins.length == 1 ? '' + 's'));
+			'" with ' + meta.mixins.length + ' mixin' + (meta.mixins.length == 1 ? '' : 's'));
 		// display structure of ctr
 	}
 

@@ -85,8 +85,24 @@
 		};
 	});
 
-	function log (o, suppressCtor) {
+	function logCtor (ctr) {
+		const meta = ctr[dcl.meta];
+		if (!meta) {
+			return console.log('class doesn\'t have information compatible with dcl');
+		}
+		console.log('class "' + ctr.name + '" is based on "' + (meta.base ? meta.base.name : 'null') +
+			'" with ' + meta.mixins.length + ' mixin' + (meta.mixins.length == 1 ? '' : 's'));
+		// display structure of ctr
+	}
 
+	function log (o, suppressCtor) {
+		if (typeof o == 'function') {
+			return logCtor(o);
+		}
+		const ctr = o[cname];
+		console.log('object of class "' + ctr.name + '"');
+		!suppressCtor && logCtor(ctr);
+		// log members of o
 	}
 
 	dcl.log = log;
