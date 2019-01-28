@@ -5,7 +5,7 @@
 [![devDependencies][dev-deps-image]][dev-deps-url]
 [![Coverage][coveralls-image]][coveralls-url]
 <!-- [![NPM version][npm-image]][npm-url] -->
-[![Analytics](https://ga-beacon.appspot.com/UA-103617480-1/uhop/dcl6/readme?pixel&useReferer)](https://github.com/uhop/dcl6)
+[![Analytics](https://ga-beacon.appspot.com/UA-103617480-1/uhop/dcl6/readme?pixel&useReferer)](https://github.com/uhop/dcl6) [![Greenkeeper badge](https://badges.greenkeeper.io/uhop/dcl6.svg)](https://greenkeeper.io/)
 
 An experimental version 6.0 of [dcl](https://github.com/uhop/dcl) for ES6.
 
